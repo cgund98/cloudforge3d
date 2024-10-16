@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  blender:
+    image: blender:local
+    container_name: blender
+    platform: linux/amd64
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Etc/UTC
+    build:
+      context: .
+      dockerfile: Dockerfile.blender
+    security_opt:
+      - seccomp=unconfined # optional
+    volumes:
+      - /Users/callum/Downloads/cube_diorama:/render
+    command: >
+      bash -c "
+      blender --verbose 1 -b /render/cube_diorama.blend -E CYCLES -f 1 || ls /tmp"
+    restart: "no"
