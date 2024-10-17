@@ -1,6 +1,8 @@
 <script lang="ts">
   import "../app.css";
   import { invoke } from "@tauri-apps/api/core";
+  import Navbar from "../lib/components/navigation/navbar/Navbar.svelte";
+  import JobsTable from "$lib/components/display/tables/jobsTable/JobsTable.svelte";
 
   let name = "";
   let greetMsg = "";
@@ -11,30 +13,32 @@
   }
 </script>
 
-<main class="container">
-  <h1 class="text-3xl font-bold underline">Welcome to Tauri + Svelte</h1>
+<div class="flex w-full">
+  <Navbar />
 
-  <div class="row">
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo vite" alt="Vite Logo" />
-    </a>
-    <a href="https://tauri.app" target="_blank">
-      <img src="/tauri.svg" class="logo tauri" alt="Tauri Logo" />
-    </a>
-    <a href="https://kit.svelte.dev" target="_blank">
-      <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
-    </a>
+  <div class="px-4 pt-8 flex flex-col flex-auto">
+    <div class="prose mb-2">
+      <h2 class="mb-0">Jobs</h2>
+    </div>
+
+      <JobsTable />
+
+      <div
+        class="flex w-full justify-between items-center py-2 px-4 border-t-[1px] border-base-200"
+      >
+        <div>
+          <p class="text-sm">
+            Showing <span class="font-semibold">1-4</span> of
+            <span class="font-semibold">4</span> jobs.
+          </p>
+        </div>
+
+        <div class="join">
+          <button class="join-item btn">1</button>
+          <button class="join-item btn btn-active">2</button>
+          <button class="join-item btn">3</button>
+          <button class="join-item btn">4</button>
+        </div>
+    </div>
   </div>
-  <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
-
-  <form class="row" on:submit|preventDefault={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
-
-  <button
-  class="inline-block cursor-pointer rounded-md bg-gray-800 px-4 py-3 text-center text-sm font-semibold uppercase text-white transition duration-200 ease-in-out hover:bg-gray-900">
-  Button
-</button>
-</main>
+</div>
