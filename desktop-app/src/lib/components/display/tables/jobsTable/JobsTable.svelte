@@ -1,12 +1,7 @@
 <script lang="ts">
+  import { mapStatusToColor } from "$lib/data/jobs/transforms";
+  import { JobStatus } from "$lib/data/jobState";
   import OpenIcon from "../../icons/OpenIcon.svelte";
-
-  enum JobStatus {
-    Pending = "pending",
-    Running = "running",
-    Succeeded = "succeeded",
-    Failed = "failed",
-  }
 
   interface Row {
     name: string;
@@ -38,14 +33,7 @@
   ];
 
   // Transformations
-  const mapStatusToColor = (status: JobStatus): string => {
-    switch (status) {
-        case JobStatus.Pending: return "badge-info"
-        case JobStatus.Running: return "badge-warning"
-        case JobStatus.Succeeded: return "badge-success"
-        case JobStatus.Failed: return "badge-error"
-    }
-  }
+  
 
   const formatDate = (date: Date): string => {
     const now = new Date()
@@ -60,7 +48,7 @@
 
     const month = date.toLocaleDateString('en-us', { month: 'long'})
 
-    return `${month} ${date.getDate()}, ${timeOfDay}`
+    return `${month} ${date.getDate()}`
   }
 </script>
 
@@ -78,10 +66,10 @@
 
     <!-- body -->
     <tbody>
-      {#each rows as row, idx}
+      {#each rows as row}
         <tr>
           <td>{row.name}</td>
-          <td class="text-right"><div class="capitalize badge badge-outline {mapStatusToColor(row.status)}">{row.status}</div></td>
+          <td class="text-right"><div class="capitalize badge badge-outline badge-{mapStatusToColor(row.status)}">{row.status}</div></td>
           <td class="text-right">{formatDate(row.createdAt)}</td>
           <td class="text-right">
             <button class="btn btn-ghost btn-sm btn-square">

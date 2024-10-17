@@ -3,6 +3,8 @@
   import { invoke } from "@tauri-apps/api/core";
   import Navbar from "../lib/components/navigation/navbar/Navbar.svelte";
   import JobsTable from "$lib/components/display/tables/jobsTable/JobsTable.svelte";
+  import JobsList from "$lib/components/subview/JobsList/JobsList.svelte";
+  import JobDetails from "$lib/components/subview/JobDetails/JobDetails.svelte";
 
   let name = "";
   let greetMsg = "";
@@ -16,29 +18,7 @@
 <div class="flex w-full">
   <Navbar />
 
-  <div class="px-4 pt-8 flex flex-col flex-auto">
-    <div class="prose mb-2">
-      <h2 class="mb-0">Jobs</h2>
-    </div>
+  <JobsList />
 
-      <JobsTable />
-
-      <div
-        class="flex w-full justify-between items-center py-2 px-4 border-t-[1px] border-base-200"
-      >
-        <div>
-          <p class="text-sm">
-            Showing <span class="font-semibold">1-4</span> of
-            <span class="font-semibold">4</span> jobs.
-          </p>
-        </div>
-
-        <div class="join">
-          <button class="join-item btn">1</button>
-          <button class="join-item btn btn-active">2</button>
-          <button class="join-item btn">3</button>
-          <button class="join-item btn">4</button>
-        </div>
-    </div>
-  </div>
+  <JobDetails />
 </div>
