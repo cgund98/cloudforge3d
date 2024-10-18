@@ -3,7 +3,7 @@
   import JobsTable from "$lib/components/display/tables/jobsTable/JobsTable.svelte";
 
 </script>
-<div class="px-4 pt-8 flex flex-col flex-auto">
+<div class="px-4 pt-8 flex flex-col flex-1">
     <div class="prose mb-2">
       <h2 class="mb-0">Jobs</h2>
     </div>

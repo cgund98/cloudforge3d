@@ -4,6 +4,21 @@ export default {
   theme: {
     extend: {},
   },
+  safelist: [
+    'badge-info',
+    'badge-warning',
+    'badge-success',
+    'badge-error',
+    'bg-info',
+    'bg-warning',
+    'bg-success',
+    'bg-error',
+    'text-info',
+    'text-warning',
+    'text-success',
+    'text-error',
+    
+  ],
   daisyui: {
     themes: [
       "light",

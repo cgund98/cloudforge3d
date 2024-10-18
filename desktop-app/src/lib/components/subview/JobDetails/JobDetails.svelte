@@ -2,14 +2,14 @@
   import RefreshIcon from "$lib/components/display/icons/RefreshIcon.svelte";
   import StopIcon from "$lib/components/display/icons/StopIcon.svelte";
   import XIcon from "$lib/components/display/icons/XIcon.svelte";
-  import JobsTable from "$lib/components/display/tables/jobsTable/JobsTable.svelte";
   import { mapStatusToColor } from "$lib/data/jobs/transforms";
   import { JobStatus } from "$lib/data/jobState";
+  import RenderProgressSection from "./sections/renderProgress/RenderProgressSection.svelte";
 
   const status: JobStatus = JobStatus.Pending;
 </script>
 
-<div class="px-4 pt-8 flex flex-col flex-auto border-l-[1px] border-base-200">
+<div class="px-4 pt-8 flex flex-col flex-1 border-l-[1px] border-base-200">
   <!-- Header -->
   <div class="mb-2 flex justify-between items-center">
     <div class="flex items-center space-x-2">
@@ -42,4 +42,5 @@
   </div>
 
   <!-- Sections -->
+  <RenderProgressSection />
 </div>
