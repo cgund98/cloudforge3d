@@ -4,6 +4,7 @@
   import XIcon from "$lib/components/display/icons/XIcon.svelte";
   import { mapStatusToColor } from "$lib/data/jobs/transforms";
   import { JobStatus } from "$lib/data/jobState";
+  import ExportsSection from "./sections/exports/ExportsSection.svelte";
   import PreviewSection from "./sections/preview/PreviewSection.svelte";
   import PropertiesSection from "./sections/properties/PropertiesSection.svelte";
   import RenderProgressSection from "./sections/renderProgress/RenderProgressSection.svelte";
@@ -51,5 +52,7 @@
     <RenderProgressSection />
 
     <PropertiesSection />
+
+    <ExportsSection />
   </div>
 </div>
