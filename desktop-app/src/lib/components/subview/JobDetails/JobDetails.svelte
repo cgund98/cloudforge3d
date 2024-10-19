@@ -4,6 +4,7 @@
   import XIcon from "$lib/components/display/icons/XIcon.svelte";
   import { mapStatusToColor } from "$lib/data/jobs/transforms";
   import { JobStatus } from "$lib/data/jobState";
+  import PreviewSection from "./sections/preview/PreviewSection.svelte";
   import PropertiesSection from "./sections/properties/PropertiesSection.svelte";
   import RenderProgressSection from "./sections/renderProgress/RenderProgressSection.svelte";
 
@@ -15,7 +16,7 @@
   <div class="mb-2 flex justify-between items-center">
     <div class="flex items-center space-x-2">
       <div class="tooltip tooltip-bottom capitalize" data-tip={status}>
-      <div class="badge badge-{mapStatusToColor(status)} badge-xs"></div>
+        <div class="badge badge-{mapStatusToColor(status)} badge-xs"></div>
       </div>
       <div class="prose">
         <h2 class="mb-0 align-middle">first job</h2>
@@ -29,15 +30,15 @@
         </button>
       </div>
       <div class="tooltip tooltip-bottom" data-tip="Retry Failed Tasks">
-      <button class="btn btn-ghost btn-sm btn-square">
-        <RefreshIcon />
-      </button>
+        <button class="btn btn-ghost btn-sm btn-square">
+          <RefreshIcon />
+        </button>
       </div>
 
       <div class="tooltip tooltip-bottom" data-tip="Close">
-      <button class="btn btn-ghost btn-sm btn-square">
-        <XIcon />
-      </button>
+        <button class="btn btn-ghost btn-sm btn-square">
+          <XIcon />
+        </button>
       </div>
     </div>
   </div>
@@ -45,8 +46,10 @@
   <!-- Sections -->
 
   <div class="flex flex-col space-y-4">
-  <RenderProgressSection />
+    <PreviewSection />
 
-  <PropertiesSection />
-</div>
+    <RenderProgressSection />
+
+    <PropertiesSection />
+  </div>
 </div>

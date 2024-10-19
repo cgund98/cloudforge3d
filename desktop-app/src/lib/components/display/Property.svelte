@@ -12,6 +12,6 @@
   </div>
 
   <div class="tooltip" data-tip={value}>
-    <p class="font-semibold truncate max-w-[100px]">{value}</p>
+    <p class="font-semibold truncate max-w-[80px]">{value}</p>
   </div>
 </div>

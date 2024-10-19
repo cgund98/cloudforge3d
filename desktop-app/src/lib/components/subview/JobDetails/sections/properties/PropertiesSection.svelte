@@ -1,9 +1,7 @@
 <script lang="ts">
-  import ClockIcon from "$lib/components/display/icons/ClockIcon.svelte";
   import Document from "$lib/components/display/icons/Document.svelte";
   import DocumentText from "$lib/components/display/icons/DocumentText.svelte";
   import FilmIcon from "$lib/components/display/icons/FilmIcon.svelte";
-  import QuestionIcon from "$lib/components/display/icons/QuestionIcon.svelte";
   import RectangleStack from "$lib/components/display/icons/RectangleStack.svelte";
 
   import Property from "$lib/components/display/Property.svelte";
