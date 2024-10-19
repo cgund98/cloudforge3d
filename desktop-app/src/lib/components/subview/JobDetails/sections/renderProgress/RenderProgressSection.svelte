@@ -49,7 +49,7 @@
     <progress class="progress progress-success h-1" value="40" max="100"
     ></progress>
   </div>
-  <div class="collapse-content px-0">
+  <div class="collapse-content px-0 overflow-hidden peer-checked:overflow-visible">
     <div class="flex flex-wrap space-x-2 space-y-2 px-2 mt-2">
       <div />
       {#each tasks as task}

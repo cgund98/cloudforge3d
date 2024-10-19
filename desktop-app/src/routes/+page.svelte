@@ -15,7 +15,7 @@
   }
 </script>
 
-<div class="flex w-full">
+<div class="flex w-full" >
   <Navbar />
 
   <JobsList />

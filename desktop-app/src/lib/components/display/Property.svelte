@@ -4,9 +4,9 @@
 </script>
 
 <div
-  class="flex justify-between w-full px-2 py-2 border-[1px] border-neutral rounded"
+  class="flex justify-between w-full px-2 py-2 border-[1px] border-base-300 rounded"
 >
-  <div class="flex space-x-3 text-neutral-content">
+  <div class="flex space-x-3">
     <slot />
     <p class="truncate max-w-[100px]">{label}</p>
   </div>
