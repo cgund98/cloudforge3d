@@ -4,6 +4,7 @@
   import XIcon from "$lib/components/display/icons/XIcon.svelte";
   import { mapStatusToColor } from "$lib/data/jobs/transforms";
   import { JobStatus } from "$lib/data/jobState";
+  import PropertiesSection from "./sections/properties/PropertiesSection.svelte";
   import RenderProgressSection from "./sections/renderProgress/RenderProgressSection.svelte";
 
   const status: JobStatus = JobStatus.Pending;
@@ -42,5 +43,10 @@
   </div>
 
   <!-- Sections -->
+
+  <div class="flex flex-col space-y-4">
   <RenderProgressSection />
+
+  <PropertiesSection />
+</div>
 </div>

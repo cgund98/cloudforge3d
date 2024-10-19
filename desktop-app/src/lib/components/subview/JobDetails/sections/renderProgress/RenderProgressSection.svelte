@@ -57,7 +57,7 @@
       {/each}
     </div>
 
-    <div class="px-4 mt-4 ">
+    <div class="px-4 mt-4 flex flex-col space-y-2">
       <Property label="Time Elapsed" value="2:04:23"><ClockIcon extraClass="stroke-neutral-content" /></Property>
       <Property label="Time Remaining" value="5:23:12"><QuestionIcon extraClass="stroke-neutral-content" /></Property>
     </div>
