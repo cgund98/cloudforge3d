@@ -5,17 +5,13 @@ services:
     container_name: blender
     platform: linux/amd64
     environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: Etc/UTC
+      OCIO: /render/config.ocio
     build:
       context: .
-      dockerfile: Dockerfile.blender
-    security_opt:
-      - seccomp=unconfined # optional
+      dockerfile: job-runner/Dockerfile.blender
     volumes:
-      - /Users/callum/Downloads/cube_diorama:/render
+      - /home/callum/Downloads/car_test:/render
     command: >
       bash -c "
-      blender --verbose 1 -b /render/cube_diorama.blend -E CYCLES -f 1 || ls /tmp"
+      blender -b /render/car_render_test.blend -o /render/ -F OPEN_EXR -f 1 -E CYCLES -- --cycles-device CPU || cat /tmp/cube_diorama.crash.txt"
     restart: "no"
