@@ -11,7 +11,7 @@ services:
       dockerfile: job-runner/Dockerfile.blender
     volumes:
       - /home/callum/Downloads/car_test:/render
-    command: >
-      bash -c "
-      blender -b /render/car_render_test.blend -o /render/ -F OPEN_EXR -f 1 -E CYCLES -- --cycles-device CPU || cat /tmp/cube_diorama.crash.txt"
+    # command: >
+    #   bash -c "
+    #   blender -b /render/car_render_test.blend -o /render/ -F OPEN_EXR -f 1 -E CYCLES -- --cycles-device CPU || cat /tmp/cube_diorama.crash.txt"
     restart: "no"

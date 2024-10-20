@@ -33,7 +33,7 @@
   ];
 
   // Transformations
-  
+
 
   const formatDate = (date: Date): string => {
     const now = new Date()

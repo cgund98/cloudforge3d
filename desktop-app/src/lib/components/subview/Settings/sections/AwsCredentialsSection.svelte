@@ -9,7 +9,7 @@
       <h3 class="">AWS Credentials</h3>
     </div>
 
-    
+
     <div class="tooltip tooltip-right" data-tip="Edit">
       <button class="btn btn-ghost btn-sm btn-square">
         <EditIcon extraClass="size-5" />
