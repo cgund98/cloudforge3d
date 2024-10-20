@@ -1,3 +1,10 @@
+"""
+This module provides functions for reading EXR files and applying OCIO transforms.
+
+We use this to create "preview" images for rendered frames that can be viewed in the app
+without any additional color processing.
+"""
+
 import OpenEXR
 import Imath
 import numpy as np
@@ -5,13 +12,12 @@ import PyOpenColorIO as OCIO
 from PIL import Image
 
 
-def read_exr(filename) -> np.ndarray:
+def _read_exr(filename) -> np.ndarray:
     """
     Read an EXR file from disk and store in a numpy array.
     """
     # Open the EXR file
     exr_file = OpenEXR.InputFile(filename)
-
     channel_names = exr_file.header()["channels"].keys()
 
     # Get the header information
@@ -46,7 +52,7 @@ def read_exr(filename) -> np.ndarray:
     return exr_data
 
 
-def apply_display_transform(
+def _apply_display_transform(
     image_data: np.ndarray, ocio_config_path: str | None
 ) -> np.ndarray:
     """
@@ -79,7 +85,7 @@ def apply_display_transform(
     return transformed_data
 
 
-def save_as_webp(image_data: np.ndarray, output_filename: str) -> None:
+def _save_as_webp(image_data: np.ndarray, output_filename: str) -> None:
     """
     Save the image as a WEBP file with the highest quality.
     """
@@ -101,6 +107,6 @@ def apply_and_persist_transform(
     Load an EXR file, apply a display transform, and persist the result as a WEBP file.
     """
 
-    loaded_data = read_exr(source_path)
-    transformed_data = apply_display_transform(loaded_data, ocio_config_path)
-    save_as_webp(transformed_data, dest_path)
+    loaded_data = _read_exr(source_path)
+    transformed_data = _apply_display_transform(loaded_data, ocio_config_path)
+    _save_as_webp(transformed_data, dest_path)
