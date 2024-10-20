@@ -2,33 +2,33 @@ import io
 import subprocess
 
 
-def render_cycles_cpu_sequence():
-    """
-    Render a sequence of frames with blender.
-    """
-
-
-def render_cycles_cpu_frame():
+def render_cycles_cpu_frame() -> str:
     """
     Render a single frame with blender.
     """
+
+    frame_number = 5
+    output_base = "/tmp/frame"
+    output_template = output_base + "####"
+    output_path = output_base + f"{frame_number:04}.exr"
 
     cmd = [
         "blender",
         "-b",
         "/render/car_render_test.blend",
         "-o",
-        "/render/",
+        output_template,
         "-F",
         "OPEN_EXR_MULTILAYER",
         "-f",
-        "1",
+        str(frame_number),
         "-E",
         "CYCLES",
         "--",
         "--cycles-device",
         "CPU",
     ]
+    print("Running command:", cmd)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     logs = []
@@ -38,3 +38,5 @@ def render_cycles_cpu_frame():
 
     process.stdout.close()
     process.wait()
+
+    return output_path

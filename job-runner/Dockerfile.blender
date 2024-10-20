@@ -58,6 +58,12 @@ RUN export BLENDER_MAJOR="${BLENDER_MAJOR:-${BLENDER_VERSION%.*}}" \
 
 RUN blender --version
 
+# Do not run as root
+RUN useradd -ms /bin/bash render
+RUN mkdir /app && chown render /app
+USER render
+
+# Copy python dependencies
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
 

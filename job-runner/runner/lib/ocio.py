@@ -12,6 +12,8 @@ def read_exr(filename) -> np.ndarray:
     # Open the EXR file
     exr_file = OpenEXR.InputFile(filename)
 
+    channel_names = exr_file.header()["channels"].keys()
+
     # Get the header information
     header = exr_file.header()
     dw = header["dataWindow"]
@@ -21,10 +23,17 @@ def read_exr(filename) -> np.ndarray:
     # Define the EXR channel format
     FLOAT = Imath.PixelType(Imath.PixelType.FLOAT)
 
-    # Read the Red, Green, and Blue channels
-    red_channel = exr_file.channel("R", FLOAT)
-    green_channel = exr_file.channel("G", FLOAT)
-    blue_channel = exr_file.channel("B", FLOAT)
+    # Read the Red, Green, and Blue channels.
+    # The channels may vary depending on if this is a multilayer EXR
+    is_multilayer = "ViewLayer.Combined.R" in channel_names
+    if is_multilayer:
+        red_channel = exr_file.channel("ViewLayer.Combined.R", FLOAT)
+        green_channel = exr_file.channel("ViewLayer.Combined.G", FLOAT)
+        blue_channel = exr_file.channel("ViewLayer.Combined.B", FLOAT)
+    else:
+        red_channel = exr_file.channel("R", FLOAT)
+        green_channel = exr_file.channel("G", FLOAT)
+        blue_channel = exr_file.channel("B", FLOAT)
 
     # Convert the byte data to numpy arrays and reshape them
     red = np.frombuffer(red_channel, dtype=np.float32).reshape(height, width)
