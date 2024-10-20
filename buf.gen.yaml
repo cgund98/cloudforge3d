@@ -1,0 +1,7 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/python:v28.2
+    out: job-runner/runner/lib/spec
+  # dependencies
+  - remote: buf.build/protocolbuffers/pyi:v28.2
+    out: job-runner/runner/lib/spec

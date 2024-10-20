@@ -5,12 +5,17 @@ services:
     container_name: blender
     platform: linux/amd64
     environment:
-      OCIO: /render/config.ocio
+      CF3D_JOB_ID: test-job
+      CF3D_TASK_ID: test-task
+      CF3D_FRAME_NUMBER: "2"
+      AWS_REGION: us-west-2
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     build:
       context: .
       dockerfile: job-runner/Dockerfile.blender
-    volumes:
-      - /home/callum/Downloads/car_test:/render
+    # volumes:
+    #   - /home/callum/Downloads/car_test:/render
     # command: >
     #   bash -c "
     #   blender -b /render/car_render_test.blend -o /render/ -F OPEN_EXR -f 1 -E CYCLES -- --cycles-device CPU || cat /tmp/cube_diorama.crash.txt"

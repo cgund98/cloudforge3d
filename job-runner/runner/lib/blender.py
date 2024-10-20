@@ -6,15 +6,14 @@ import io
 import subprocess
 
 
-def render_cycles_cpu_frame() -> str:
+def render_cycles_cpu_frame(
+    blend_path: str, frame_number: int
+) -> tuple[str | None, list[str]]:
     """
     Render a single frame with blender.
 
     A wrapper around the blender CLI.
     """
-    # TODO - these should be function arguments
-    blend_path = "/render/car_render_test.blend"
-    frame_number = 5
 
     # Determine output path. This is where our final frame will be written to.
     output_base = "/tmp/frame"
@@ -53,11 +52,9 @@ def render_cycles_cpu_frame() -> str:
         print(line.rstrip())
 
     process.stdout.close()
-    process.wait()
+    code = process.wait()
 
-    # Write logs to a file so it can be used to debug the job
-    logs_path = output_base + padded_frame + ".stdout.txt"
-    with open(logs_path, "w") as out:
-        out.writelines(logs)
+    if code != 0:
+        output_path = None
 
-    return output_path, logs_path
+    return output_path, logs

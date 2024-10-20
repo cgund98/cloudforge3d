@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.scripts]
 render-cpu = "runner.cmd.render_cpu:main"
 ocio-test = "runner.cmd.ocio_test:main"
+sqs-test = "runner.cmd.sqs_read_test:main"
 
 [tool.poetry.dependencies]
 python = "~3.11"
@@ -16,6 +17,7 @@ opencolorio = "^2.4.0"
 OpenEXR = "^3.3.1"
 numpy = "^2.1.2"
 pillow = "^11.0.0"
+protobuf = "^5.28.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"

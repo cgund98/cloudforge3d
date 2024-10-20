@@ -8,9 +8,9 @@ class CloudDeployStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # The code that defines your stack goes here
-        s3.Bucket(scope, "blob-store", bucket_name="cf3d-blob-store")
+        s3.Bucket(self, "blob-store", bucket_name="cf3d-blob-store")
 
-        # example resource
+        # Task updates SQS queue
         sqs.Queue(
             self,
             "task-updates",
