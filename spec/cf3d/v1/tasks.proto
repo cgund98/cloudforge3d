@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package cf3d.v1;
 
+/** Enums **/
+
 enum TaskStatus {
   TASK_STATUS_UNSPECIFIED = 0;
   TASK_STATUS_PENDING = 1;
@@ -10,7 +12,19 @@ enum TaskStatus {
   TASK_STATUS_FAILED = 4;
 }
 
+/** Events **/
+
 message TaskStatusUpdate {
   string task_id = 1;
   TaskStatus status = 2;
+}
+
+/** Commands **/
+
+message RetryAllFailedTasksCommand {
+  string job_id = 1;
+}
+
+message RetryFailedTaskCommand {
+  string task_id = 1;
 }

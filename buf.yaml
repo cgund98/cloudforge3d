@@ -7,3 +7,5 @@ breaking:
     - FILE
 modules:
   - path: spec
+plugins:
+  - 

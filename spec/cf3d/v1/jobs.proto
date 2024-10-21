@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package cf3d.v1;
+
+import "google/protobuf/timestamp.proto";
+
+/** Service **/
+
+service JobsService {
+  rpc CreateJob(CreateJobRequest) returns (CreateJobResponse) {}
+}
+
+/** Mutations **/
+
+message CreateJobRequest {
+  string file_path = 1;
+  int32 frame_start = 2;
+  int32 frame_count = 3;
+  int32 frame_rate = 4;
+  string download_path = 5;
+  optional string name = 6;
+  optional string ocio_config_path = 7;
+}
+
+message CreateJobResponse {
+  string job_id = 1;
+}
+
+message UpdateJobCommand {
+  string job_id = 1;
+  optional string download_path = 2;
+}
+
+message CancelJobCommand {
+  string job_id = 1;
+}
+
+message DeleteJobCommand {
+  string job_id = 1;
+}
+
+/** Queries **/
+
+message ListJobsResponse {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message GetJobRequest {}
+
+message GetJobResponse {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp queued_at = 5;
+  google.protobuf.Timestamp completed_at = 6;
+  string file_name = 7;
+  double file_size_mb = 8;
+  int32 frame_count = 9;
+  int32 frame_rate = 10;
+  int32 frame_start = 11;
+  int32 frame_rendered_count = 12;
+  string download_path = 13;
+  bool has_preview = 14;
+}

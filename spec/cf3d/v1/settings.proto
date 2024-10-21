@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package cf3d.v1;
+
+/** Enums **/
+
+enum QueueHealthDescription {
+  QUEUE_HEALTH_DESCRIPTION_UNSPECIFIED = 0;
+  QUEUE_HEALTH_DESCRIPTION_READY = 1;
+  QUEUE_HEALTH_DESCRIPTION_INVALID_CREDENTIALS = 2;
+  QUEUE_HEALTH_DESCRIPTION_QUEUE_NONEXISTENT = 3;
+}
+
+/** Commands **/
+
+message UpdateAwsCredentialsCommand {
+  string access_key_id = 1;
+  string secret_access_key = 2;
+  string region = 3;
+}
+
+/** Queries **/
+
+message GetAwsCredentialsResponse {
+  string region = 1;
+}
+
+message GetQueueHealthResponse {
+  QueueHealthDescription description = 1;
+}
