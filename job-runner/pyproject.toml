@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "runner"
+version = "0.1.0"
+description = "A wrapper for blender jobs run for CloudForge3D"
+authors = ["Callum Gundlach <gundlachcallum@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.scripts]
+render-cpu = "runner.cmd.render_cpu:main"
+ocio-test = "runner.cmd.ocio_test:main"
+sqs-test = "runner.cmd.sqs_read_test:main"
+
+[tool.poetry.dependencies]
+python = "~3.11"
+boto3 = "^1.35.44"
+opencolorio = "^2.4.0"
+OpenEXR = "^3.3.1"
+numpy = "^2.1.2"
+pillow = "^11.0.0"
+protobuf = "^5.28.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

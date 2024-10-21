@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package cf3d.v1;
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_PENDING = 1;
+  TASK_STATUS_RUNNING = 2;
+  TASK_STATUS_SUCCEEDED = 3;
+  TASK_STATUS_FAILED = 4;
+}
+
+message TaskStatusUpdate {
+  string task_id = 1;
+  TaskStatus status = 2;
+}

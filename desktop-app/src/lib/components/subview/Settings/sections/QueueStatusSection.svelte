@@ -10,15 +10,15 @@
       <div class="prose">
         <h3 class="">Queue Status</h3>
       </div>
-  
-      
+
+
       <div class="tooltip tooltip-right" data-tip="Refresh Status">
         <button class="btn btn-ghost btn-sm btn-square">
           <RefreshIcon extraClass="size-5" />
         </button>
       </div>
     </div>
-  
+
     <div class="max-w-xs">
     <Property label="Status" value="Ready">
         <SignalIcon />

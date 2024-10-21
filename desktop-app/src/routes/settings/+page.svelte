@@ -6,7 +6,6 @@
 </script>
 <div class="flex w-full" >
     <Navbar />
-  
+
     <Settings />
   </div>
-  
