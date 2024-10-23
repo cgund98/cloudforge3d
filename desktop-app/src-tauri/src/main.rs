@@ -14,7 +14,7 @@ async fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .setup(cloudforge3d_lib::init::deps::init_deps)
-        .invoke_handler(tauri::generate_handler![cloudforge3d_lib::cmd::greet::greet])
+        .invoke_handler(tauri::generate_handler![cloudforge3d_lib::interface::greet::greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

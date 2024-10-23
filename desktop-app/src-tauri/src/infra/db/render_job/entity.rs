@@ -21,6 +21,7 @@ pub struct RenderJob {
 #[derive(Debug)]
 pub enum JobStatus {
     Uploading,
+    UploadFailed,
     Pending,
     Running,
     Succeeded,
@@ -34,6 +35,7 @@ impl std::str::FromStr for JobStatus {
     fn from_str(input: &str) -> Result<JobStatus, Self::Err> {
         match input {
             "uploading" => Ok(JobStatus::Uploading),
+            "uploading-failed" => Ok(JobStatus::UploadFailed),
             "pending" => Ok(JobStatus::Pending),
             "running" => Ok(JobStatus::Running),
             "succeeded" => Ok(JobStatus::Succeeded),
@@ -48,6 +50,7 @@ impl ToString for JobStatus {
     fn to_string(&self) -> String {
         match self {
             JobStatus::Uploading => "uploading".to_string(),
+            JobStatus::UploadFailed => "uploading-failed".to_string(),
             JobStatus::Pending => "pending".to_string(),
             JobStatus::Running => "running".to_string(),
             JobStatus::Succeeded => "succeeded".to_string(),

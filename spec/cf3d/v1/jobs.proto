@@ -66,3 +66,15 @@ message GetJobResponse {
   string download_path = 13;
   bool has_preview = 14;
 }
+
+/** Events **/
+
+message JobFileUploadProgressEvent {
+  string job_id = 1;
+  string file_name = 2;
+  uint64 current_chunk = 3;
+  uint64 total_chunks = 4;
+  bool has_error = 5;
+  bool is_done = 6;
+  optional string description = 7;
+}

@@ -9,7 +9,7 @@ pub fn gen_migrations() -> Migrations<'static> {
             CREATE TABLE render_job (
                 id VARCHAR(255) PRIMARY KEY,
                 name VARCHAR(1024) NOT NULL,
-                status VARCHAR(255) CHECK(status IN ('uploading', 'pending', 'running', 'succeeded', 'failed', 'canceled')) NOT NULL,
+                status VARCHAR(255) CHECK(status IN ('uploading', 'upload-failed', 'pending', 'running', 'succeeded', 'failed', 'canceled')) NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 queued_at DATETIME,
                 completed_at DATETIME,

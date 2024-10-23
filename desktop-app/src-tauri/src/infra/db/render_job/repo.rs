@@ -45,7 +45,7 @@ impl Repo {
     }
 
     // Fetch a RenderJob by its primary key
-    pub fn get_by_id(&self, id: &str) -> Result<RenderJob, AppError> {
+    pub fn get_by_id(&self, id: &str) -> Result<Option<RenderJob>, AppError> {
         let conn = self.pool.get()?;
 
         let result = conn.query_row(
@@ -54,11 +54,7 @@ impl Repo {
             parse_render_job,
         ).optional()?;
 
-        match result {
-            Some(ent) => Ok(ent),
-            None => Err(AppError::NotFound(format!("id = '{}'", id,))),
-        }
-
+        Ok(result)
     }
 
     // Fetch a page of RenderJob entities. 
@@ -142,6 +138,10 @@ impl Repo {
         )?;
 
         let new_job = self.get_by_id(&job.id)?;
-        Ok(new_job)
+
+        match new_job {
+            Some(ent) => Ok(ent),
+            None => Err(AppError::NotFound(format!("id = '{}'", &job.id))),
+        }
     }
 }

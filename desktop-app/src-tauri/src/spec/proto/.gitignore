@@ -1,1 +1,3 @@
 *.rs
+!v1.rs
+!mod.rs
