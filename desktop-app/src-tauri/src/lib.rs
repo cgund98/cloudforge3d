@@ -3,3 +3,4 @@ pub mod init;
 pub mod infra;
 pub mod state;
 pub mod errors;
+pub mod spec;
