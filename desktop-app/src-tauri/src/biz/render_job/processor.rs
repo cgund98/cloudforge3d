@@ -5,16 +5,35 @@ use tauri::AppHandle;
 
 use crate::{
     errors::AppError,
-    infra::{db, s3}, interface::events::emit_job_file_upload_progress_event, spec::proto::v1::JobFileUploadProgressEvent
+    infra::{db, s3::{self, client_manager::S3ClientManager}}, interface::events::emit_job_file_upload_progress_event, spec::proto::v1::JobFileUploadProgressEvent
 };
 
-// Type alias for a queue
+// Type alias for a deadqueue Queue
 pub type Queue = deadqueue::unlimited::Queue<FileUploadProcessorInput>;
 
-// FileUploadProcesser will run in a separate process and upload job files to S3.
-pub struct FileUploadProcessor {
+// A shared queue wrapper that will be used for communicating with other processes
+pub struct FileUploadQueue {
     queue: Queue,
-    s3_client: Arc<aws_sdk_s3::Client>,
+}
+
+impl FileUploadQueue {
+    pub fn new() -> FileUploadQueue {
+        FileUploadQueue {
+            queue: Queue::new()
+        }
+    }
+    pub fn enqueue(&self, input: FileUploadProcessorInput) {
+        self.queue.push(input);
+    }
+
+    async fn pop(&self) -> FileUploadProcessorInput {
+        self.queue.pop().await
+    }
+}
+
+// FileUploadProcesser will run in a separate process and upload job files to S3.
+pub struct FileUploadProcessor{
+    queue: Arc<FileUploadQueue>,
     job_repo: Arc<db::render_job::repo::Repo>,
     handle: Arc<AppHandle>,
 }
@@ -28,23 +47,17 @@ pub struct FileUploadProcessorInput {
     pub ocio_config_path: Option<String>,
 }
 
-impl FileUploadProcessor {
-    pub fn new(s3_client: Arc<aws_sdk_s3::Client>, job_repo: Arc<db::render_job::repo::Repo>, handle: Arc<AppHandle>) -> FileUploadProcessor {
+impl FileUploadProcessor{
+    pub fn new( job_repo: Arc<db::render_job::repo::Repo>, queue: Arc<FileUploadQueue>, handle: Arc<AppHandle>) -> FileUploadProcessor {
         FileUploadProcessor {
-            queue: Queue::new(),
-            s3_client,
+            queue,
             job_repo,
             handle,
         }
     }
 
-    // Add an item to the queue.
-    pub fn enqueue(&self, input: FileUploadProcessorInput) {
-        self.queue.push(input);
-    }
-
     // Start the process that will continuously read from the queue
-    pub async fn start_task(&self) {
+    pub async fn start_task(&self, mut client_manager: S3ClientManager) {
         loop {
             let input = self.queue.pop().await;
             let job_id = input.job_id.clone();
@@ -52,13 +65,12 @@ impl FileUploadProcessor {
 
             log::info!("Handling file upload for job (job_id={job_id})...");
 
-            let result = self.handle_input(input.clone())
-                .await;
+            let result = self.handle_input(&mut client_manager, input.clone()).await;
 
             // We don't want to exit in case of failure. Re-queue the upload and try again.
             result.unwrap_or_else(|f| {
                 log::warn!("Encountered unexpected error when handling file upload for job (job_id={job_id}): {f}");
-                self.enqueue(input);
+                self.queue.enqueue(input);
                 self.emit_failed_progress(job_id, file_path);
 
                 // Sleep to prevent infinite loops
@@ -68,7 +80,7 @@ impl FileUploadProcessor {
     }
 
     // Handle a single file upload
-    async fn handle_input(&self, input: FileUploadProcessorInput) -> Result<(), AppError> {
+    async fn handle_input(&self, client_manager: &mut S3ClientManager, input: FileUploadProcessorInput) -> Result<(), AppError> {
         let job_id = input.job_id;
         let job_query = self.job_repo.get_by_id(&job_id)?;
 
@@ -77,11 +89,14 @@ impl FileUploadProcessor {
             return Ok(())
         }
 
+        // Fetch client
+        let s3_client = client_manager.get_client().await?;
+
         // Upload blend file
         let blend_path = PathBuf::from(input.file_path);
         let blend_key = "render.blend".to_string();
 
-        s3::job_file::upload_job_file(&self.s3_client, job_id, blend_path, blend_key, |p| self.emit_progress(p)).await?;
+        s3::job_file::upload_job_file(s3_client, job_id, blend_path, blend_key, |p| self.emit_progress(p)).await?;
 
         Ok(())
     }

@@ -1,13 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
 use r2d2_sqlite::SqliteConnectionManager;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 use super::pool::PoolType;
 use super::migration::gen_migrations;
 
-pub fn init_db(app: &mut tauri::App) -> Result<Arc<PoolType>, Box<dyn std::error::Error + 'static>> {
-    let handle = app.handle();
+pub fn init_db(handle: &AppHandle) -> Result<Arc<PoolType>, Box<dyn std::error::Error + 'static>> {
 
     // Find app path
     let binding = handle.path().app_data_dir().unwrap();

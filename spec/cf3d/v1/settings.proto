@@ -14,15 +14,17 @@ enum QueueHealthDescription {
 /** Commands **/
 
 message UpdateAwsCredentialsCommand {
-  string access_key_id = 1;
-  string secret_access_key = 2;
-  string region = 3;
+  optional string access_key_id = 1;
+  optional string secret_access_key = 2;
+  optional string region = 3;
 }
 
 /** Queries **/
 
 message GetAwsCredentialsResponse {
-  string region = 1;
+  string access_key_id = 1;
+  string secret_access_key = 2;
+  string region = 3;
 }
 
 message GetQueueHealthResponse {

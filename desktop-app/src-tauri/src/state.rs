@@ -1,8 +1,6 @@
-use std::sync::Mutex;
+use tauri::State;
 
-use tauri::{AppHandle, State};
-
-use crate::infra::db::pool::PoolType;
+use crate::biz;
 
 
 /** Custom types */
@@ -12,5 +10,6 @@ pub type WrappedState<'a> = State<'a, AppState>;
 
 #[derive(Default)]
 pub struct AppState {
-    pub pool: Mutex<Option<PoolType>>,
+    pub job_ctrl:Option<biz::render_job::controller::Controller>,
+    pub settings_ctrl:Option<biz::settings::Controller>,
 }

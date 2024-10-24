@@ -114,7 +114,7 @@ pub async fn upload_job_file(client: &aws_sdk_s3::Client, job_id: String, source
         );
 
         // Notify of upload progress
-        progress_callback(Progress{
+        let _ = progress_callback(Progress{
             job_id: job_id.clone(),
             file_name: file_name.to_string(),
             uploaded: chunk_index,

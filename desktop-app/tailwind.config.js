@@ -17,6 +17,10 @@ export default {
     "text-warning",
     "text-success",
     "text-error",
+    "alert-info",
+    "alert-warning",
+    "alert-success",
+    "alert-error",
   ],
   daisyui: {
     themes: [
