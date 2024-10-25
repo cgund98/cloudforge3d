@@ -15,10 +15,13 @@
   }
 </script>
 
-<div class="flex w-full" >
+<div class="flex w-full overflow-y-hidden max-h-[100vh]" >
   <Navbar />
+
+  <div class="flex w-full overflow-y-scroll">
 
   <JobsList />
 
   <JobDetails />
+</div>
 </div>

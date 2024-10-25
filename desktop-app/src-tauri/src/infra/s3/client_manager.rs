@@ -38,6 +38,7 @@ impl S3ClientManager {
             let s3_config = aws_sdk_s3::config::Builder::new()
                 .region(region)
                 .credentials_provider(credentials)
+                .behavior_version_latest()
                 .build();
             let client = aws_sdk_s3::Client::from_conf(s3_config);
             self.cur_client = Some(client)

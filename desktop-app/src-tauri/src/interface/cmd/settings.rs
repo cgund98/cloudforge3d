@@ -10,9 +10,5 @@ pub async fn update_aws_credentials(input: UpdateAwsCredentialsCommand, state: t
 #[tauri::command]
 pub async fn get_aws_credentials(state: tauri::State<'_, AppState>) -> Result<GetAwsCredentialsResponse, AppError> {
     let ctrl = state.settings_ctrl.as_ref().unwrap();
-    let result = ctrl.get_aws_credentials().await?;
-
-    log::info!("Got result: {result:?}");
-
-    Ok(result)
+    ctrl.get_aws_credentials().await
 }

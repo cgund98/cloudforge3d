@@ -1,5 +1,5 @@
 use core::time;
-use std::{path::PathBuf, sync::Arc, thread};
+use std::{path::{Path, PathBuf}, sync::Arc, thread};
 
 use tauri::AppHandle;
 
@@ -47,6 +47,14 @@ pub struct FileUploadProcessorInput {
     pub ocio_config_path: Option<String>,
 }
 
+// Helper struct used for passing data from file scans
+struct FileScanResult {
+    target_key: String,
+    source_path: PathBuf,
+}
+
+const FAILURE_BACKOFF: core::time::Duration = time::Duration::from_secs(20);
+
 impl FileUploadProcessor{
     pub fn new( job_repo: Arc<db::render_job::repo::Repo>, queue: Arc<FileUploadQueue>, handle: Arc<AppHandle>) -> FileUploadProcessor {
         FileUploadProcessor {
@@ -69,36 +77,84 @@ impl FileUploadProcessor{
 
             // We don't want to exit in case of failure. Re-queue the upload and try again.
             result.unwrap_or_else(|f| {
-                log::warn!("Encountered unexpected error when handling file upload for job (job_id={job_id}): {f}");
+                log::error!("Encountered unexpected error when handling file upload for job (job_id={job_id}): {f}");
                 self.queue.enqueue(input);
                 self.emit_failed_progress(job_id, file_path);
 
                 // Sleep to prevent infinite loops
-                thread::sleep(time::Duration::from_secs(3));
+                thread::sleep(FAILURE_BACKOFF);
             });
         }
     }
 
     // Handle a single file upload
     async fn handle_input(&self, client_manager: &mut S3ClientManager, input: FileUploadProcessorInput) -> Result<(), AppError> {
-        let job_id = input.job_id;
-        let job_query = self.job_repo.get_by_id(&job_id)?;
+        let job_id = input.job_id.clone();
+        let _job_query = self.job_repo.get_by_id(&job_id)?;
 
-        if job_query.is_none() {
-            log::info!("Job (job_id={job_id}) does not exist. Skipping upload.");
-            return Ok(())
-        }
+        // if job_query.is_none() {
+        //     log::info!("Job (job_id={job_id}) does not exist. Skipping upload.");
+        //     return Ok(())
+        // }
 
         // Fetch client
         let s3_client = client_manager.get_client().await?;
 
+        // Upload OCIO files
+        let ocio_paths = FileUploadProcessor::scan_for_ocio_files(&input)?;
+        for entry in ocio_paths {
+            let target_key = entry.target_key;
+            log::info!("Uploading OCIO file ({target_key})...");
+            s3::job_file::upload_job_file(s3_client, job_id.clone(), entry.source_path, target_key, |p| self.emit_progress(p)).await?;
+        }
+
         // Upload blend file
         let blend_path = PathBuf::from(input.file_path);
         let blend_key = "render.blend".to_string();
+        let blend_name = blend_path.file_name().unwrap().to_string_lossy().into_owned();
 
+        log::info!("Uploading blend file ({blend_name})");
         s3::job_file::upload_job_file(s3_client, job_id, blend_path, blend_key, |p| self.emit_progress(p)).await?;
 
         Ok(())
+    }
+
+    fn scan_for_ocio_files(input: &FileUploadProcessorInput) -> Result<Vec<FileScanResult>, AppError> {
+        let mut paths = Vec::new();
+        if input.ocio_config_path.is_none() {
+            return Ok(paths);
+        }
+
+        let ocio_config_path = PathBuf::from(input.ocio_config_path.clone().unwrap());
+        paths.push(FileScanResult {
+            target_key: "ocio/config.ocio".to_string(),
+            source_path: ocio_config_path.clone(),
+        });
+
+        // Scan for .cube files
+        let ocio_base_path = ocio_config_path.parent();
+        if let Some(base_path) = ocio_base_path {
+            for entry in std::fs::read_dir(base_path)? {
+                let entry = entry?;
+                let path = entry.path();
+
+                // Determine relative path
+                let relative_path = path
+                    .strip_prefix(base_path.to_path_buf())
+                    .map_err(|e| AppError::FileReadError("Could not create relative path.".to_string()))?;
+                let relative_path_str = relative_path.to_string_lossy().into_owned();
+        
+                // Check if the entry is a file and has a ".cube" extension
+                if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("cube") {
+                    paths.push(FileScanResult {
+                        target_key: "ocio/".to_string() + &relative_path_str,
+                        source_path: path,
+                    });
+                }
+            }
+        }
+
+        Ok(paths)
     }
 
     /** Event emission wrappers */

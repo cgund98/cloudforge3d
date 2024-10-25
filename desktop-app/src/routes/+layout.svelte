@@ -1,5 +1,6 @@
 <script lang="ts">
-  import ErrorWrapper from "$lib/components/display/alert/AlertWrapper.svelte";
+  import ErrorWrapper from "$lib/components/display/notification/AlertWrapper.svelte";
+  import Tray from "$lib/components/display/notification/Tray.svelte";
   import { ContextKeys } from "$lib/state";
 
   import { setContext } from "svelte";
@@ -15,5 +16,5 @@
 <div data-theme={theme}>
   <slot />
 
-  <ErrorWrapper />
+  <Tray />
 </div>

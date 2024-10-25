@@ -6,13 +6,16 @@ use cloudforge3d_lib::interface::cmd;
 #[tokio::main]
 async fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::new()
-        .target(tauri_plugin_log::Target::new(
-          tauri_plugin_log::TargetKind::LogDir {
-            file_name: Some("logs".to_string()),
-          },
-        ))
-        .build())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("logs".to_string()),
+                    },
+                ))
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| cloudforge3d_lib::init::deps::init_deps(app))
@@ -20,7 +23,8 @@ async fn main() {
             cloudforge3d_lib::interface::greet::greet,
             cmd::settings::update_aws_credentials,
             cmd::settings::get_aws_credentials,
-          ])
+            cmd::render_job::create_job,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

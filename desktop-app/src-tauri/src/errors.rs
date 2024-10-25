@@ -25,6 +25,9 @@ pub enum AppError {
     #[error("400 <|> Unable to read file from disk: {0}")]
     FileReadError(String),
 
+    #[error("500 <|> Encountered problem during reading/writing: {0}")]
+    IoError(#[from] std::io::Error),
+
     #[error("500 <|> Unable to encode struct to JSON: {0}")]
     JsonEncodeError(#[from] serde_json::Error),
 

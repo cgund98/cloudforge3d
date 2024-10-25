@@ -1,12 +1,20 @@
 <script>
 
   import JobsTable from "$lib/components/display/tables/jobsTable/JobsTable.svelte";
+  import { createJob } from "$lib/data/jobs/commands/createJob";
 
 </script>
 <div class="px-4 pt-8 flex flex-col flex-1">
+  <div class="flex w-full justify-between">
+    
     <div class="prose mb-2">
       <h2 class="mb-0">Jobs</h2>
     </div>
+
+    <div><button class="join-item btn btn-sm btn-primary" on:click={() => {
+      createJob().then(console.log).catch(console.error)
+    }}>Create Job</button></div>
+  </div>
 
       <JobsTable />
 

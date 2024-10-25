@@ -5,7 +5,7 @@ services:
     container_name: blender
     platform: linux/amd64
     environment:
-      CF3D_JOB_ID: test-job
+      CF3D_JOB_ID: test-id
       CF3D_TASK_ID: test-task
       CF3D_FRAME_NUMBER: "2"
       AWS_REGION: us-west-2

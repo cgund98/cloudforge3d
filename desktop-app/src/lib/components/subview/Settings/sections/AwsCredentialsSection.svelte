@@ -39,7 +39,7 @@
       })
       .catch((err) => {
         console.error(err)
-        alerts.update(cur => [...cur, genError("Encountered error when setting AWS credentials.")])
+        alerts.update(cur => [...(cur ? cur : []), genError("Encountered error when setting AWS credentials.")])
       });
   };
 
@@ -98,7 +98,7 @@
       <span class="label-text">Secret Access Key</span>
     </div>
     <input
-      type="text"
+      type="password"
       placeholder="Not set"
       bind:value={secretAccessKey}
       readonly={!editMode}

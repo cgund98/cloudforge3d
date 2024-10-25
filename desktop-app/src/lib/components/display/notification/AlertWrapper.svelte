@@ -19,12 +19,9 @@
   $: alertsLocal = $alerts.slice(0, MAX_ITEMS);
 </script>
 
-<div class="fixed bottom-4 left-4 right-4">
-  <div class="flex flex-col space-y-2">
-    {#each $alerts as alert}
-    <button on:click={() => removeAlert(alert.id)} transition:scale>
-      <Alert msg={alert.msg} severity={alert.severity} onTimeout={() => removeAlert(alert.id)}/>
-    </button>
-    {/each}
-  </div>
-</div>
+
+{#each $alerts as alert}
+<button on:click={() => removeAlert(alert.id)} transition:scale>
+  <Alert msg={alert.msg} severity={alert.severity} onTimeout={() => removeAlert(alert.id)}/>
+</button>
+{/each}
