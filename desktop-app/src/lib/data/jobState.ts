@@ -1,4 +1,6 @@
 export enum JobStatus {
+  Uploading = "uploading",
+  UploadFailed = "upload-failed",
   Pending = "pending",
   Running = "running",
   Succeeded = "succeeded",
@@ -7,4 +9,9 @@ export enum JobStatus {
 }
 
 export const isCompleted = (status: JobStatus): boolean =>
-  [JobStatus.Succeeded, JobStatus.Failed, JobStatus.Canceled].includes(status);
+  [
+    JobStatus.Succeeded,
+    JobStatus.Failed,
+    JobStatus.Canceled,
+    JobStatus.UploadFailed,
+  ].includes(status);

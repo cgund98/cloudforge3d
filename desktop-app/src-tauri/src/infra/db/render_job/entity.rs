@@ -9,7 +9,7 @@ pub struct RenderJob {
     pub queued_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub file_name: String,
-    pub file_size_mb: f32,
+    pub file_size_mb: u64,
     pub frame_count: i32,
     pub frame_rate: i32,
     pub frame_start: i32,

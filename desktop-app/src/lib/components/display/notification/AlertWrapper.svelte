@@ -21,7 +21,7 @@
 
 
 {#each $alerts as alert}
-<button on:click={() => removeAlert(alert.id)} transition:scale>
+<button onclick={() => removeAlert(alert.id)} transition:scale>
   <Alert msg={alert.msg} severity={alert.severity} onTimeout={() => removeAlert(alert.id)}/>
 </button>
 {/each}

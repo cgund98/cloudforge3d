@@ -2,7 +2,7 @@ use std::{str::FromStr, sync::Arc};
 
 use rusqlite::{params, OptionalExtension};
 
-use crate::{errors::AppError, infra::db::pool::PoolType};
+use crate::{errors::AppError, infra::db::pool::{ConnType, PoolType}};
 
 use super::entity::{RenderTask, TaskStatus};
 
@@ -25,18 +25,8 @@ fn parse_render_task(row: &rusqlite::Row) -> Result<RenderTask, rusqlite::Error>
     })
 }
 
-pub struct Repo {
-    pool: Arc<PoolType>,
-}
-
-impl Repo {
-    pub fn new(pool: Arc<PoolType>) -> Repo {
-        Repo { pool }
-    }
-
     // Fetch a single task by its primary key
-    pub fn get_by_id(&self, id: &str) -> Result<RenderTask, AppError> {
-        let conn = self.pool.get()?;
+    pub fn get_by_id(conn: &ConnType, id: &str) -> Result<RenderTask, AppError> {
 
         let result = conn.query_row(
             "SELECT * FROM render_task WHERE id = ?1",
@@ -51,9 +41,7 @@ impl Repo {
     }
 
     // Fetch a list of tasks belonging to a job
-    pub fn list_by_job_id(&self, job_id: &str) -> Result<Vec<RenderTask>, AppError> {
-        let conn = self.pool.get()?;
-
+    pub fn list_by_job_id(conn: &ConnType, job_id: &str) -> Result<Vec<RenderTask>, AppError> {
         let mut stmt = conn.prepare("
             SELECT 
                 *
@@ -77,10 +65,9 @@ impl Repo {
     }
 
     // Upsert a single render task
-    pub fn save(&self, task: RenderTask) -> Result<RenderTask, AppError> {
-        let conn = self.pool.get()?;
+    pub fn save(tx: &rusqlite::Transaction, task: RenderTask) -> Result<(), AppError> {
 
-        conn.execute(
+        tx.execute(
             "INSERT INTO render_task (
                 id, 
                 job_id, 
@@ -116,7 +103,5 @@ impl Repo {
             ],
         )?;
 
-        let result = self.get_by_id(&task.id)?;
-        Ok(result)
+        Ok(())
     }
-}

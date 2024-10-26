@@ -1,44 +1,28 @@
 <script lang="ts">
   import { mapStatusToColor } from "$lib/data/jobs/transforms";
   import { JobStatus } from "$lib/data/jobState";
+  import { fade } from "svelte/transition";
   import OpenIcon from "../../icons/OpenIcon.svelte";
+  import { getContext } from "svelte";
+  import type { Writable } from "svelte/store";
+  import { ContextKeys } from "$lib/state";
+
+  const selectedJobId = getContext(ContextKeys.SELECTED_JOB_ID) as Writable<string>;
 
   interface Row {
+    id: string;
     name: string;
     status: JobStatus;
     createdAt: Date;
   }
 
-  const rows: Row[] = [
-    {
-      name: "first job",
-      status: JobStatus.Pending,
-      createdAt: new Date(),
-    },
-    {
-      name: "second job",
-      status: JobStatus.Running,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    },
-    {
-      name: "third job",
-      status: JobStatus.Succeeded,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    },
-    {
-      name: "fourth job",
-      status: JobStatus.Failed,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 24),
-    },
-  ];
+  export let rows: Row[] = [];
 
   // Transformations
-
-
   const formatDate = (date: Date): string => {
     const now = new Date()
 
-    const timeOfDay = `${(now.getHours() + 1) % 13}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() ? "PM" : "AM" }`
+    const timeOfDay = `${(date.getHours() + 1) % 13}:${String(date.getMinutes()).padStart(2, '0')} ${date.getHours() ? "PM" : "AM" }`
 
     if (date.toDateString() === now.toDateString()) return `Today, ${timeOfDay}`
 
@@ -52,8 +36,8 @@
   }
 </script>
 
-<div class="overflow-x-auto">
-  <table class="table table-auto w-full">
+<div class="">
+  <table class="table table-auto w-full transition">
     <!-- head -->
     <thead>
       <tr>
@@ -67,12 +51,12 @@
     <!-- body -->
     <tbody>
       {#each rows as row}
-        <tr>
+        <tr transition:fade>
           <td>{row.name}</td>
           <td class="text-right"><div class="capitalize badge badge-outline badge-{mapStatusToColor(row.status)}">{row.status}</div></td>
           <td class="text-right">{formatDate(row.createdAt)}</td>
           <td class="text-right">
-            <button class="btn btn-ghost btn-sm btn-square">
+            <button class="btn btn-ghost btn-sm btn-square" onclick={() => selectedJobId.set(row.id)}>
               <OpenIcon />
             </button>
           </td>

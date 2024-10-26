@@ -3,33 +3,55 @@
   import StopIcon from "$lib/components/display/icons/StopIcon.svelte";
   import XIcon from "$lib/components/display/icons/XIcon.svelte";
   import { mapStatusToColor } from "$lib/data/jobs/transforms";
-  import { JobStatus } from "$lib/data/jobState";
+  import { isCompleted, JobStatus } from "$lib/data/jobState";
+  import { getContext } from "svelte";
   import ExportsSection from "./sections/exports/ExportsSection.svelte";
   import PreviewSection from "./sections/preview/PreviewSection.svelte";
   import PropertiesSection from "./sections/properties/PropertiesSection.svelte";
   import RenderProgressSection from "./sections/renderProgress/RenderProgressSection.svelte";
+  import { ContextKeys } from "$lib/state";
+  import type { Writable } from "svelte/store";
+  import { getJob, type JobDetails } from "$lib/data/jobs/commands/getJob";
 
-  const status: JobStatus = JobStatus.Pending;
+  let status: JobStatus = JobStatus.Pending;
+
+  let job: JobDetails | null = null;
+
+  const selectedJobId = getContext(ContextKeys.SELECTED_JOB_ID) as Writable<string>;
+
+  selectedJobId.subscribe((jobId) => {
+    getJob({jobId}).then(res => {
+      if (res.job === null || res.job === undefined) {
+        job = null;
+        return;
+      }
+
+      job = res.job;
+    })
+  })
 </script>
 
+{#if job !== null}
 <div class="px-4 pt-8 flex flex-col flex-1 border-l-[1px] border-base-200">
   <!-- Header -->
   <div class="mb-2 flex justify-between items-center">
     <div class="flex items-center space-x-2">
-      <div class="tooltip tooltip-bottom capitalize" data-tip={status}>
-        <div class="badge badge-{mapStatusToColor(status)} badge-xs"></div>
+      <div class="tooltip tooltip-bottom capitalize" data-tip={job.status}>
+        <div class="badge badge-{mapStatusToColor(job.status)} badge-xs"></div>
       </div>
       <div class="prose">
-        <h2 class="mb-0 align-middle">first job</h2>
+        <h2 class="mb-0 align-middle">{job.name}</h2>
       </div>
     </div>
 
     <div class="flex space-x-3">
+      {#if !isCompleted(job.status)}
       <div class="tooltip tooltip-bottom" data-tip="Cancel Job">
         <button class="btn btn-ghost btn-sm btn-square">
           <StopIcon />
         </button>
       </div>
+      {/if}
       <div class="tooltip tooltip-bottom" data-tip="Retry Failed Tasks">
         <button class="btn btn-ghost btn-sm btn-square">
           <RefreshIcon />
@@ -37,7 +59,7 @@
       </div>
 
       <div class="tooltip tooltip-bottom" data-tip="Close">
-        <button class="btn btn-ghost btn-sm btn-square">
+        <button class="btn btn-ghost btn-sm btn-square" onclick={() => selectedJobId.set("")}>
           <XIcon />
         </button>
       </div>
@@ -51,8 +73,10 @@
 
     <RenderProgressSection />
 
-    <PropertiesSection />
+    <PropertiesSection job={job} />
 
     <ExportsSection />
   </div>
 </div>
+
+{/if}

@@ -24,6 +24,8 @@ async fn main() {
             cmd::settings::update_aws_credentials,
             cmd::settings::get_aws_credentials,
             cmd::render_job::create_job,
+            cmd::render_job::get_job,
+            cmd::render_job::list_jobs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

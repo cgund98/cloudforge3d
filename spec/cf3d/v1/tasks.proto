@@ -19,12 +19,12 @@ message TaskStatusUpdate {
   TaskStatus status = 2;
 }
 
-/** Commands **/
+/** Mutations **/
 
-message RetryAllFailedTasksCommand {
+message RetryAllFailedTasksRequest {
   string job_id = 1;
 }
 
-message RetryFailedTaskCommand {
+message RetryFailedTaskRequest {
   string task_id = 1;
 }

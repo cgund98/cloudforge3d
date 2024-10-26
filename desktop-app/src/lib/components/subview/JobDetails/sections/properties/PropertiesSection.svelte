@@ -5,6 +5,9 @@
   import RectangleStack from "$lib/components/display/icons/RectangleStack.svelte";
 
   import Property from "$lib/components/display/Property.svelte";
+  import type {JobDetails} from "$lib/data/jobs/commands/getJob";
+
+  export let job: JobDetails;
 </script>
 
 <div class="collapse collapse-arrow  border-base-300 bg-base-200 border">
@@ -14,16 +17,16 @@
   </div>
   <div class="collapse-content">
     <div class="grid lg:grid-cols-2 grid-cols-1 gap-2">
-      <Property label="File Name" value="v_lookdev_2020_09_04.blend"
+      <Property label="File Name" value={job.fileName}
         ><Document/></Property
       >
-      <Property label="File Size" value="5:23:12"
+      <Property label="File Size" value={`${job.fileSizeMb ?? "<1"} MB`}
         ><DocumentText/></Property
       >
-      <Property label="Frame Count" value="240"
+      <Property label="Frame Count" value={job.frameCount.toString()}
         ><RectangleStack/></Property
       >
-      <Property label="Frame Rate" value="24"
+      <Property label="Frame Rate" value={job.frameRate.toString()}
         ><FilmIcon/></Property
       >
     </div>

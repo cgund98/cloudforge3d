@@ -55,7 +55,7 @@
     {#if !editMode}
       <div class="tooltip tooltip-right" data-tip="Edit">
         <button
-          on:click={() => {
+          onclick={() => {
             fetchAndPopulateFields();
             editMode = true;
           }}
@@ -108,10 +108,10 @@
 
   {#if editMode}
     <div class="flex flex-row space-x-2 pt-4">
-      <button class="btn btn-primary" on:click={submit}>Save Changes</button>
+      <button class="btn btn-primary" onclick={submit}>Save Changes</button>
       <button
         class="btn btn-neutral"
-        on:click={() => {
+        onclick={() => {
           fetchAndPopulateFields();
           editMode = false;
         }}>Reset Changes</button

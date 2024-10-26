@@ -10,7 +10,7 @@
   <div class="">
     <div class="flex justify-between flex-row">
       <p class="text-md font-medium">Downloads</p>
-      <button class="btn btn-primary btn-sm" on:click={(event) => {
+      <button class="btn btn-primary btn-sm" onclick={(event) => {
         event.preventDefault()
         checked = false;
       }}>Download Frames</button>

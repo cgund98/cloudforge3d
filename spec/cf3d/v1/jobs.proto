@@ -26,31 +26,43 @@ message CreateJobResponse {
   string job_id = 1;
 }
 
-message UpdateJobCommand {
+message UpdateJobRequest {
   string job_id = 1;
   optional string download_path = 2;
 }
 
-message CancelJobCommand {
+message CancelJobRequest {
   string job_id = 1;
 }
 
-message DeleteJobCommand {
+message DeleteJobRequest {
   string job_id = 1;
 }
 
 /** Queries **/
 
-message ListJobsResponse {
+message ListJobsRequest {
+  optional uint32 limit = 1;
+  optional uint32 offset = 2;
+}
+
+message ListJobsResponseItem {
   string id = 1;
   string name = 2;
   string status = 3;
   google.protobuf.Timestamp created_at = 4;
 }
 
-message GetJobRequest {}
+message ListJobsResponse {
+  repeated ListJobsResponseItem jobs = 1;
+  uint32 total = 2;
+}
 
-message GetJobResponse {
+message GetJobRequest {
+  string job_id = 1;
+}
+
+message JobDetails {
   string id = 1;
   string name = 2;
   string status = 3;
@@ -58,13 +70,17 @@ message GetJobResponse {
   google.protobuf.Timestamp queued_at = 5;
   google.protobuf.Timestamp completed_at = 6;
   string file_name = 7;
-  double file_size_mb = 8;
+  uint64 file_size_mb = 8;
   int32 frame_count = 9;
   int32 frame_rate = 10;
   int32 frame_start = 11;
   int32 frame_rendered_count = 12;
   string download_path = 13;
   bool has_preview = 14;
+}
+
+message GetJobResponse {
+  optional JobDetails job = 1;
 }
 
 /** Events **/

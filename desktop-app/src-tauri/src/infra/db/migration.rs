@@ -14,7 +14,7 @@ pub fn gen_migrations() -> Migrations<'static> {
                 queued_at DATETIME,
                 completed_at DATETIME,
                 file_name VARCHAR(1024) NOT NULL,
-                file_size_mb FLOAT NOT NULL,
+                file_size_mb BIGINT NOT NULL,
                 frame_count INTEGER NOT NULL,
                 frame_rate INTEGER NOT NULL,
                 frame_start INTEGER NOT NULL,

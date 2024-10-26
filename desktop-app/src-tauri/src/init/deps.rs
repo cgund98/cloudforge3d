@@ -18,13 +18,13 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
 
     // Initialize tables
     let pool = init_db(handle).unwrap();
-    let repos = init_repos(pool, handle).await;
+    let repos = init_repos(handle).await;
 
     // Initialize queues for process communication
     let file_upload_queue = Arc::new(FileUploadQueue::new());
 
     // Initialize controllers
-    let job_ctrl = biz::render_job::controller::Controller::new(repos.job_repo.clone(), file_upload_queue.clone());
+    let job_ctrl = biz::render_job::controller::Controller::new(pool.clone(), file_upload_queue.clone());
     let settings_ctrl = biz::settings::Controller::new(repos.settings_repo.clone());
 
     // Initialize state
@@ -39,7 +39,7 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
         let s3_client_manager = S3ClientManager::new(repos.settings_repo);
 
         // Initialize file upload processor
-        let processor = FileUploadProcessor::new(repos.job_repo, file_upload_queue.clone(), Arc::new(processor_handle));
+        let processor = FileUploadProcessor::new(pool.clone(), file_upload_queue.clone(), Arc::new(processor_handle));
         processor.start_task(s3_client_manager).await
     });
 

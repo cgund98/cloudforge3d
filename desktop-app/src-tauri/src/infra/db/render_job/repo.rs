@@ -2,8 +2,7 @@ use std::{str::FromStr, sync::Arc};
 
 use rusqlite::OptionalExtension;
 
-use crate::errors::AppError;
-use crate::infra::db::pool::PoolType;
+use crate::{errors::AppError, infra::db::pool::ConnType};
 use super::entity::{JobStatus, RenderJob};
 
 // Parse JobStatus from a sqlite query row
@@ -35,19 +34,8 @@ fn parse_render_job(row: &rusqlite::Row) -> Result<RenderJob, rusqlite::Error> {
     })
 }
 
-pub struct Repo {
-    pool: Arc<PoolType>,
-}
-
-impl Repo {
-    pub fn new(pool: Arc<PoolType>) -> Repo {
-        Repo { pool }
-    }
-
     // Fetch a RenderJob by its primary key
-    pub fn get_by_id(&self, id: &str) -> Result<Option<RenderJob>, AppError> {
-        let conn = self.pool.get()?;
-
+    pub fn get_by_id(conn: &ConnType, id: &str) -> Result<Option<RenderJob>, AppError> {
         let result = conn.query_row(
             "SELECT * FROM render_job WHERE id = ?1",
             rusqlite::params![id],
@@ -59,10 +47,14 @@ impl Repo {
 
     // Fetch a page of RenderJob entities. 
     // Order by creation date in reverse.
-    pub fn list(&self, limit: u32, offset: u32) -> Result<Vec<RenderJob>, AppError> {
-        let conn = self.pool.get()?;
+    pub fn list(conn: &ConnType, limit: u32, offset: u32) -> Result<(Vec<RenderJob>, u32), AppError> {
 
-        let mut stmt = conn.prepare("
+        let count: u32 = conn.query_row("SELECT COUNT(*) as count FROM render_job", (), |r| {
+            let count: u32 = r.get("count")?;
+            Ok(count)
+        })?;
+
+        let mut sel_stmt = conn.prepare("
             SELECT 
                 *
             FROM 
@@ -73,7 +65,7 @@ impl Repo {
         ")?;
 
         // Map result
-        let ent_iter = stmt.query_map([limit, offset], parse_render_job)?;
+        let ent_iter = sel_stmt.query_map([limit, offset], parse_render_job)?;
 
         let mut entries: Vec<RenderJob> = Vec::new();
         for db_entry in ent_iter {
@@ -82,13 +74,11 @@ impl Repo {
             entries.push(entry);
         }
 
-        Ok(entries)
+        Ok((entries, count))
     }
 
     // Persist a RenderJob to the database
-    pub fn save(&self, job: RenderJob) -> Result<RenderJob, AppError> {
-        let conn = self.pool.get()?;
-
+    pub fn save(tx: &rusqlite::Transaction, job: RenderJob) -> Result<(), AppError> {
         // SQL statement
         let sql: &str = "
         INSERT INTO render_job (
@@ -127,21 +117,15 @@ impl Repo {
         ";
 
         // Execute query
-        conn.execute(
+        tx.execute(
             sql,
             (
                 &job.id, &job.name, &job.status.to_string(), &job.created_at, &job.queued_at, 
                 &job.completed_at, &job.file_name, &job.file_size_mb, &job.frame_count, 
-                &job.frame_rate, &job.frame_rate, &job.frame_start, &job.download_path, 
+                &job.frame_rate, &job.frame_start, &job.download_path, 
                 &job.has_preview, &job.frame_rendered_count
             ),
         )?;
 
-        let new_job = self.get_by_id(&job.id)?;
-
-        match new_job {
-            Some(ent) => Ok(ent),
-            None => Err(AppError::NotFound(format!("id = '{}'", &job.id))),
-        }
+        Ok(())
     }
-}

@@ -5,7 +5,7 @@ use tauri::AppHandle;
 
 use crate::{
     errors::AppError,
-    infra::{db, s3::{self, client_manager::S3ClientManager}}, interface::events::emit_job_file_upload_progress_event, spec::proto::v1::JobFileUploadProgressEvent
+    infra::{db::{self, decorator::{with_conn, with_transaction}, pool::PoolType, render_job::{entity::JobStatus, repo}}, s3::{self, client_manager::S3ClientManager}}, interface::events::emit_job_file_upload_progress_event, spec::proto::v1::JobFileUploadProgressEvent
 };
 
 // Type alias for a deadqueue Queue
@@ -34,7 +34,7 @@ impl FileUploadQueue {
 // FileUploadProcesser will run in a separate process and upload job files to S3.
 pub struct FileUploadProcessor{
     queue: Arc<FileUploadQueue>,
-    job_repo: Arc<db::render_job::repo::Repo>,
+    pool: Arc<PoolType>,
     handle: Arc<AppHandle>,
 }
 
@@ -56,10 +56,10 @@ struct FileScanResult {
 const FAILURE_BACKOFF: core::time::Duration = time::Duration::from_secs(20);
 
 impl FileUploadProcessor{
-    pub fn new( job_repo: Arc<db::render_job::repo::Repo>, queue: Arc<FileUploadQueue>, handle: Arc<AppHandle>) -> FileUploadProcessor {
+    pub fn new(pool: Arc<PoolType>, queue: Arc<FileUploadQueue>, handle: Arc<AppHandle>) -> FileUploadProcessor {
         FileUploadProcessor {
             queue,
-            job_repo,
+            pool,
             handle,
         }
     }
@@ -90,12 +90,13 @@ impl FileUploadProcessor{
     // Handle a single file upload
     async fn handle_input(&self, client_manager: &mut S3ClientManager, input: FileUploadProcessorInput) -> Result<(), AppError> {
         let job_id = input.job_id.clone();
-        let _job_query = self.job_repo.get_by_id(&job_id)?;
+        let job_query = with_conn(&self.pool, |conn| repo::get_by_id(conn, &job_id))?;
 
-        // if job_query.is_none() {
-        //     log::info!("Job (job_id={job_id}) does not exist. Skipping upload.");
-        //     return Ok(())
-        // }
+        if job_query.is_none() {
+            log::info!("Job (job_id={job_id}) does not exist. Skipping upload.");
+            return Ok(())
+        }
+        let mut job = job_query.unwrap();
 
         // Fetch client
         let s3_client = client_manager.get_client().await?;
@@ -115,6 +116,11 @@ impl FileUploadProcessor{
 
         log::info!("Uploading blend file ({blend_name})");
         s3::job_file::upload_job_file(s3_client, job_id, blend_path, blend_key, |p| self.emit_progress(p)).await?;
+
+        // Update job status
+        job.status = JobStatus::Pending;
+        
+        with_transaction(&self.pool, |tx| repo::save(tx, job))?;
 
         Ok(())
     }

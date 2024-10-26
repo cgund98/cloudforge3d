@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use aws_sdk_s3::{operation::create_multipart_upload::CreateMultipartUploadOutput, primitives::{ByteStream, Length}, types::{CompletedMultipartUpload, CompletedPart}};
 
-use crate::errors::AppError;
+use crate::{errors::AppError, infra::file::parse_file_size_bytes};
 
 const BUCKET_NAME: &str = "cf3d-blob-store";
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
@@ -23,11 +23,7 @@ fn generate_input_path(job_id: String, key: String) -> String {
 
 // Read file metadata and determine number of chunks
 async fn parse_chunks_count(path: PathBuf) -> Result<(u64, u64), AppError> {
-    // Read file metadata
-    let file_metadata = tokio::fs::metadata(path)
-        .await
-        .map_err(|e| AppError::FileReadError(format!("{e}")))?;
-    let file_size = file_metadata.len();
+    let file_size = parse_file_size_bytes(path).await?;
 
     // Calculate chunk count
     let mut chunk_count = (file_size / CHUNK_SIZE) + 1;
