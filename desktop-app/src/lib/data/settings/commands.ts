@@ -30,7 +30,7 @@ export const getAwsCredentials = async () => {
 };
 
 export const updateAwsCredentials = async (
-  args: UpdateAwsCredentialsRequest
+  args: UpdateAwsCredentialsRequest,
 ) => {
   const { accessKeyId = null, secretAccessKey = null, region = null } = args;
 

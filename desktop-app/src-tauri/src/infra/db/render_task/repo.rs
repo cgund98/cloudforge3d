@@ -47,7 +47,7 @@ pub fn get_by_id(conn: &ConnType, id: &str) -> Result<Option<RenderTask>, AppErr
 pub fn list_by_job_id(conn: &ConnType, job_id: &str) -> Result<Vec<RenderTask>, AppError> {
     let mut stmt = conn.prepare(
         "
-            SELECT 
+            SELECT
                 *
             FROM
                 render_task
@@ -77,8 +77,8 @@ pub fn count_unfinished_tasks(
 ) -> Result<u32, AppError> {
     let count: u32 = conn.query_row(
         "
-                SELECT COUNT(*) as count 
-                FROM render_task 
+                SELECT COUNT(*) as count
+                FROM render_task
                 WHERE job_id = ?1 AND id != ?2 AND status IN ('pending', 'running')
             ",
         rusqlite::params![job_id, exclude_id],
@@ -92,17 +92,17 @@ pub fn count_unfinished_tasks(
 }
 
 // Upsert a single render task
-pub fn save(tx: &rusqlite::Transaction, task: RenderTask) -> Result<(), AppError> {
+pub fn save(tx: &rusqlite::Transaction, task: &RenderTask) -> Result<(), AppError> {
     tx.execute(
         "INSERT INTO render_task (
-                id, 
-                job_id, 
-                frame_number, 
-                created_at, 
-                started_at, 
-                queued_at, 
-                completed_at, 
-                status, 
+                id,
+                job_id,
+                frame_number,
+                created_at,
+                started_at,
+                queued_at,
+                completed_at,
+                status,
                 retry_count
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?

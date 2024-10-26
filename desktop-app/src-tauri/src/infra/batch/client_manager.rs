@@ -4,16 +4,16 @@ use std::{
 };
 
 use aws_config::Region;
-use aws_sdk_sqs::config::Credentials;
+use aws_sdk_batch::config::Credentials;
 
 use crate::{
     errors::AppError,
     infra::settings::{AwsConfig, SettingsRepo},
 };
 
-pub struct SqsClientManager {
+pub struct BatchClientManager {
     settings_repo: Arc<SettingsRepo>,
-    cur_client: Option<aws_sdk_sqs::Client>,
+    cur_client: Option<aws_sdk_batch::Client>,
     cur_hash: u64,
 }
 
@@ -23,20 +23,20 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
     s.finish()
 }
 
-impl SqsClientManager {
-    pub fn new(settings_repo: Arc<SettingsRepo>) -> SqsClientManager {
-        SqsClientManager {
+impl BatchClientManager {
+    pub fn new(settings_repo: Arc<SettingsRepo>) -> BatchClientManager {
+        BatchClientManager {
             settings_repo,
             cur_client: None,
             cur_hash: 0,
         }
     }
 
-    // Return an up-to-date SQS client
-    pub async fn get_client(&mut self) -> Result<&aws_sdk_sqs::Client, AppError> {
+    // Return an up-to-date Batch client
+    pub async fn get_client(&mut self) -> Result<&aws_sdk_batch::Client, AppError> {
         let config = self.settings_repo.get_aws_config().await?;
 
-        // Initialize a new SQS client if credentials have not yet been set
+        // Initialize a new Batch client if credentials have not yet been set
         if self.check_config_change(config.clone()) || self.cur_client.is_none() {
             let credentials = Credentials::new(
                 config.access_key_id,
@@ -46,12 +46,12 @@ impl SqsClientManager {
                 "manual",
             );
             let region = Region::new(config.region);
-            let s3_config = aws_sdk_sqs::config::Builder::new()
+            let s3_config = aws_sdk_batch::config::Builder::new()
                 .region(region)
                 .credentials_provider(credentials)
                 .behavior_version_latest()
                 .build();
-            let client = aws_sdk_sqs::Client::from_conf(s3_config);
+            let client = aws_sdk_batch::Client::from_conf(s3_config);
             self.cur_client = Some(client)
         }
 

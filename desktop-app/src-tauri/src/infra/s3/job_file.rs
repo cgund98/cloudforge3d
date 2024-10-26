@@ -1,6 +1,10 @@
 use std::path::PathBuf;
 
-use aws_sdk_s3::{operation::create_multipart_upload::CreateMultipartUploadOutput, primitives::{ByteStream, Length}, types::{CompletedMultipartUpload, CompletedPart}};
+use aws_sdk_s3::{
+    operation::create_multipart_upload::CreateMultipartUploadOutput,
+    primitives::{ByteStream, Length},
+    types::{CompletedMultipartUpload, CompletedPart},
+};
 
 use crate::{errors::AppError, infra::file::parse_file_size_bytes};
 
@@ -45,12 +49,21 @@ async fn parse_chunks_count(path: PathBuf) -> Result<(u64, u64), AppError> {
 }
 
 // Upload a large file to the job S3 bucket.
-pub async fn upload_job_file(client: &aws_sdk_s3::Client, job_id: String, source_path: PathBuf, target_key: String, progress_callback: impl Fn(Progress) -> Result<(), AppError>) -> Result<(), AppError> {
-
+pub async fn upload_job_file(
+    client: &aws_sdk_s3::Client,
+    job_id: String,
+    source_path: PathBuf,
+    target_key: String,
+    progress_callback: impl Fn(Progress) -> Result<(), AppError>,
+) -> Result<(), AppError> {
     // Generate object path
     let upload_path = generate_input_path(job_id.clone(), target_key.clone());
 
-    let file_name = source_path.file_name().map(|n| n.to_str()).unwrap_or(Some("")).unwrap_or("unknown");
+    let file_name = source_path
+        .file_name()
+        .map(|n| n.to_str())
+        .unwrap_or(Some(""))
+        .unwrap_or("unknown");
 
     // Initialize upload
     let multipart_upload_res: CreateMultipartUploadOutput = client
@@ -61,15 +74,16 @@ pub async fn upload_job_file(client: &aws_sdk_s3::Client, job_id: String, source
         .await
         .map_err(|e| AppError::S3UploadError(format!("{e}")))?;
 
-    let upload_id = multipart_upload_res.upload_id().ok_or(AppError::S3UploadError(
-        "Missing upload_id after CreateMultipartUpload".to_string(),
-    ))?;
+    let upload_id = multipart_upload_res
+        .upload_id()
+        .ok_or(AppError::S3UploadError(
+            "Missing upload_id after CreateMultipartUpload".to_string(),
+        ))?;
 
     // Parse metadata
     let chunks_info = parse_chunks_count(source_path.clone()).await?;
     let chunk_count = chunks_info.0;
     let size_of_last_chunk = chunks_info.1;
-    
 
     // Upload parts
     let mut upload_parts: Vec<aws_sdk_s3::types::CompletedPart> = Vec::new();
@@ -110,12 +124,13 @@ pub async fn upload_job_file(client: &aws_sdk_s3::Client, job_id: String, source
         );
 
         // Notify of upload progress
-        let _ = progress_callback(Progress{
+        let _ = progress_callback(Progress {
             job_id: job_id.clone(),
             file_name: file_name.to_string(),
             uploaded: chunk_index + 1,
             total: chunk_count,
-        }).inspect_err(|e| log::warn!("Encountered error while notifying progress update: {e}"));
+        })
+        .inspect_err(|e| log::warn!("Encountered error while notifying progress update: {e}"));
     }
 
     // Close upload

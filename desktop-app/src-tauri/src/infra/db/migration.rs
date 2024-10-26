@@ -22,7 +22,7 @@ pub fn gen_migrations() -> Migrations<'static> {
                 has_preview BOOLEAN NOT NULL DEFAULT FALSE,
                 frame_rendered_count INTEGER NOT NULL DEFAULT 0
             );
-            
+
             CREATE INDEX idx_render_job_created_at ON render_job (created_at);
         "),
         M::up("

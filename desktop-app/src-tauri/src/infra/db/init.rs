@@ -3,11 +3,10 @@ use std::{sync::Arc, time::Duration};
 use r2d2_sqlite::SqliteConnectionManager;
 use tauri::{AppHandle, Manager};
 
-use super::pool::PoolType;
 use super::migration::gen_migrations;
+use super::pool::PoolType;
 
 pub fn init_db(handle: &AppHandle) -> Result<Arc<PoolType>, Box<dyn std::error::Error + 'static>> {
-
     // Find app path
     let binding = handle.path().app_data_dir().unwrap();
     let data_path = binding.as_path();
@@ -25,21 +24,18 @@ pub fn init_db(handle: &AppHandle) -> Result<Arc<PoolType>, Box<dyn std::error::
     // Run migrations
     let mut conn = rusqlite::Connection::open(db_file.clone())?;
     migrations
-    .to_latest(&mut conn)
-    .inspect_err(|f| log::error!("Encountered error when running migrations: {f}"))?;
+        .to_latest(&mut conn)
+        .inspect_err(|f| log::error!("Encountered error when running migrations: {f}"))?;
     drop(conn);
-
 
     // Initialize connection manager
     log::info!("Initializing sqlite database at {db_file:?}...");
-    let manager = SqliteConnectionManager::file(db_file).with_init(
-        move |c| {
-            c.pragma_update(None, "foreign_keys", "ON")
-                .and_then(|_| c.pragma_update(None, "synchronous", "NORMAL"))
-                .and_then(|_| c.pragma_update(None, "journal_mode", "WAL"))
-                .inspect_err(|f| log::error!("Encountered error when setting pragma values: {f}"))
-        }
-    );
+    let manager = SqliteConnectionManager::file(db_file).with_init(move |c| {
+        c.pragma_update(None, "foreign_keys", "ON")
+            .and_then(|_| c.pragma_update(None, "synchronous", "NORMAL"))
+            .and_then(|_| c.pragma_update(None, "journal_mode", "WAL"))
+            .inspect_err(|f| log::error!("Encountered error when setting pragma values: {f}"))
+    });
 
     // Initialize connection pool
     let builder = r2d2::Pool::builder();

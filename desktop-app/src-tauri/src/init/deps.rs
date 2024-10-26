@@ -1,4 +1,3 @@
-
 // Type aliases
 type InitResult = Result<(), Box<dyn std::error::Error + 'static>>;
 
@@ -16,8 +15,7 @@ use crate::{biz::render_job::processor::FileUploadProcessor, infra::db::init::in
 
 use super::repo::init_repos;
 
-async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> AppState{
-
+async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> AppState {
     // Initialize tables
     let pool = init_db(handle).unwrap();
     let repos = init_repos(handle).await;
@@ -26,30 +24,35 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
     let file_upload_queue = Arc::new(FileUploadQueue::new());
 
     // Initialize controllers
-    let job_ctrl = biz::render_job::controller::Controller::new(pool.clone(), file_upload_queue.clone());
+    let job_ctrl =
+        biz::render_job::controller::Controller::new(pool.clone(), file_upload_queue.clone());
     let task_ctrl = Arc::new(biz::render_task::controller::Controller::new(pool.clone()));
     let settings_ctrl = biz::settings::Controller::new(repos.settings_repo.clone());
 
     // Initialize state
-    let state = crate::state::AppState{
+    let state = crate::state::AppState {
         job_ctrl: Some(job_ctrl),
         task_ctrl: Some(task_ctrl.clone()),
         settings_ctrl: Some(settings_ctrl),
     };
     // Spawn a separate thread for the file upload processor
     let s3_client_manager = S3ClientManager::new(repos.settings_repo.clone());
-    let processor = FileUploadProcessor::new(pool.clone(), file_upload_queue.clone(), Arc::new(processor_handle));
-    
-    tokio::spawn(async move {
-        processor.start_task(s3_client_manager).await
-    });
+    let processor = FileUploadProcessor::new(
+        pool.clone(),
+        file_upload_queue.clone(),
+        Arc::new(processor_handle),
+    );
+
+    tokio::spawn(async move { processor.start_task(s3_client_manager).await });
 
     // Spawn a separate thread for the task update consumer
     let sqs_client_manager = SqsClientManager::new(repos.settings_repo.clone());
     let mut updates_consumer = task_status_update::TaskStatusUpdateConsumer::new();
-    
+
     tokio::spawn(async move {
-        updates_consumer.listen_for_task_status_updates(sqs_client_manager, &task_ctrl).await
+        updates_consumer
+            .listen_for_task_status_updates(sqs_client_manager, &task_ctrl)
+            .await
     });
 
     state

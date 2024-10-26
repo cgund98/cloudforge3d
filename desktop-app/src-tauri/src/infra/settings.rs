@@ -15,8 +15,7 @@ struct V1 {
     aws_region: String,
 }
 
-impl jsondb::SchemaV0 for V1 {
-}
+impl jsondb::SchemaV0 for V1 {}
 
 #[derive(Hash, Clone)]
 pub struct AwsConfig {
@@ -28,19 +27,17 @@ pub struct AwsConfig {
 /** Repository */
 
 pub struct SettingsRepo {
-    db: jsondb::JsonDb<V1>
+    db: jsondb::JsonDb<V1>,
 }
 
 impl SettingsRepo {
     pub async fn new(db_path: PathBuf) -> SettingsRepo {
         let db = JsonDb::load(db_path)
-        .await
-        .inspect_err(|e| log::error!("Unable to initialize settings DB: {e}"))
-        .unwrap();
+            .await
+            .inspect_err(|e| log::error!("Unable to initialize settings DB: {e}"))
+            .unwrap();
 
-        SettingsRepo {
-            db
-        }
+        SettingsRepo { db }
     }
 
     pub async fn save_aws_config(&self, config: AwsConfig) -> Result<(), AppError> {
@@ -49,7 +46,6 @@ impl SettingsRepo {
         writer.aws_access_key_id = config.access_key_id;
         writer.aws_secret_access_key = config.secret_access_key;
         writer.aws_region = config.region;
-
 
         Ok(())
     }
@@ -63,6 +59,6 @@ impl SettingsRepo {
             secret_access_key: reader.aws_secret_access_key.clone(),
         };
 
-        Ok(config) 
+        Ok(config)
     }
 }

@@ -1,8 +1,7 @@
-
 use std::sync::Arc;
 
-use aws_sdk_s3::Client as S3Client;
 use aws_config::BehaviorVersion;
+use aws_sdk_s3::Client as S3Client;
 
 // Initialize the S3 client
 pub async fn init_s3_client() -> Arc<aws_sdk_s3::Client> {

@@ -35,6 +35,15 @@ impl Controller {
         // Update task fields
         task.status = render_task::entity::TaskStatus::from(input.status());
 
+        let now = chrono::offset::Utc::now();
+        match input.status() {
+            v1::TaskStatus::Unspecified => (),
+            v1::TaskStatus::Pending => (),
+            v1::TaskStatus::Running => task.started_at = Some(now),
+            v1::TaskStatus::Failed => task.completed_at = Some(now),
+            v1::TaskStatus::Succeeded => task.completed_at = Some(now),
+        }
+
         // Fetch job
         let mut job = with_conn(&self.pool, |conn| {
             render_job::repo::get_by_id(conn, &task.job_id)
@@ -62,8 +71,8 @@ impl Controller {
         }
 
         with_transaction(&self.pool, |tx| {
-            render_task::repo::save(tx, task)?;
-            render_job::repo::save(tx, job)?;
+            render_task::repo::save(tx, &task)?;
+            render_job::repo::save(tx, &job)?;
             Ok(())
         })?;
 

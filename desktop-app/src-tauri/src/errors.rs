@@ -25,6 +25,9 @@ pub enum AppError {
     #[error("500 <|> Unable to read from SQS queue: {0}")]
     SQSError(String),
 
+    #[error("500 <|> Unable to schedule job on AWS Batch: {0}")]
+    BatchError(String),
+
     #[error("400 <|> Unable to read file from disk: {0}")]
     FileReadError(String),
 

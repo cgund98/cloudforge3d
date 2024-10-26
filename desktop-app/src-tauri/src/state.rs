@@ -4,7 +4,6 @@ use tauri::State;
 
 use crate::biz;
 
-
 /** Custom types */
 pub type WrappedState<'a> = State<'a, AppState>;
 
@@ -12,7 +11,7 @@ pub type WrappedState<'a> = State<'a, AppState>;
 
 #[derive(Default)]
 pub struct AppState {
-    pub job_ctrl:Option<biz::render_job::controller::Controller>,
-    pub task_ctrl:Option<Arc<biz::render_task::controller::Controller>>,
-    pub settings_ctrl:Option<biz::settings::Controller>,
+    pub job_ctrl: Option<biz::render_job::controller::Controller>,
+    pub task_ctrl: Option<Arc<biz::render_task::controller::Controller>>,
+    pub settings_ctrl: Option<biz::settings::Controller>,
 }

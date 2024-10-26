@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Manager};
 
-use crate::infra::{db::{self, pool::PoolType}, settings};
+use crate::infra::{
+    db::{self, pool::PoolType},
+    settings,
+};
 
 // Helper struct used to hold all initialized repos
 pub struct Repos {
@@ -11,7 +14,6 @@ pub struct Repos {
 
 // Initialize repositories
 pub async fn init_repos(handle: &AppHandle) -> Repos {
-
     // Settings database path
     let binding = handle.path().app_data_dir().unwrap();
     let data_path = binding.as_path();

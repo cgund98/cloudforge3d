@@ -1,11 +1,28 @@
 use core::time;
-use std::{path::{Path, PathBuf}, sync::Arc, thread};
+use std::{path::PathBuf, sync::Arc, thread};
 
 use tauri::AppHandle;
 
 use crate::{
     errors::AppError,
-    infra::{db::{self, decorator::{with_conn, with_transaction}, pool::PoolType, render_job::{entity::JobStatus, repo}}, s3::{self, client_manager::S3ClientManager}}, interface::events::emit_job_file_upload_progress_event, spec::proto::v1::JobFileUploadProgressEvent
+    infra::{
+        batch::{self, client_manager::BatchClientManager},
+        db::{
+            decorator::{with_async_transaction, with_conn},
+            pool::PoolType,
+            render_job::{
+                entity::{JobStatus, RenderJob},
+                repo,
+            },
+            render_task::{
+                self,
+                entity::{RenderTask, TaskStatus},
+            },
+        },
+        s3::{self, client_manager::S3ClientManager},
+    },
+    interface::events::emit_job_file_upload_progress_event,
+    spec::proto::v1::JobFileUploadProgressEvent,
 };
 
 // Type alias for a deadqueue Queue
@@ -19,7 +36,7 @@ pub struct FileUploadQueue {
 impl FileUploadQueue {
     pub fn new() -> FileUploadQueue {
         FileUploadQueue {
-            queue: Queue::new()
+            queue: Queue::new(),
         }
     }
     pub fn enqueue(&self, input: FileUploadProcessorInput) {
@@ -32,12 +49,11 @@ impl FileUploadQueue {
 }
 
 // FileUploadProcesser will run in a separate process and upload job files to S3.
-pub struct FileUploadProcessor{
+pub struct FileUploadProcessor {
     queue: Arc<FileUploadQueue>,
     pool: Arc<PoolType>,
     handle: Arc<AppHandle>,
 }
-
 
 // Data object used for persisting in queue.
 #[derive(Clone)]
@@ -55,8 +71,12 @@ struct FileScanResult {
 
 const FAILURE_BACKOFF: core::time::Duration = time::Duration::from_secs(20);
 
-impl FileUploadProcessor{
-    pub fn new(pool: Arc<PoolType>, queue: Arc<FileUploadQueue>, handle: Arc<AppHandle>) -> FileUploadProcessor {
+impl FileUploadProcessor {
+    pub fn new(
+        pool: Arc<PoolType>,
+        queue: Arc<FileUploadQueue>,
+        handle: Arc<AppHandle>,
+    ) -> FileUploadProcessor {
         FileUploadProcessor {
             queue,
             pool,
@@ -65,7 +85,11 @@ impl FileUploadProcessor{
     }
 
     // Start the process that will continuously read from the queue
-    pub async fn start_task(&self, mut client_manager: S3ClientManager) {
+    pub async fn start_task(
+        &self,
+        mut s3_manager: S3ClientManager,
+        mut batch_manager: BatchClientManager,
+    ) {
         loop {
             let input = self.queue.pop().await;
             let job_id = input.job_id.clone();
@@ -73,7 +97,9 @@ impl FileUploadProcessor{
 
             log::info!("Handling file upload for job (job_id={job_id})...");
 
-            let result = self.handle_input(&mut client_manager, input.clone()).await;
+            let result = self
+                .handle_input(&mut s3_manager, &mut batch_manager, input.clone())
+                .await;
 
             // We don't want to exit in case of failure. Re-queue the upload and try again.
             result.unwrap_or_else(|f| {
@@ -88,44 +114,74 @@ impl FileUploadProcessor{
     }
 
     // Handle a single file upload
-    async fn handle_input(&self, client_manager: &mut S3ClientManager, input: FileUploadProcessorInput) -> Result<(), AppError> {
+    async fn handle_input(
+        &self,
+        s3_manager: &mut S3ClientManager,
+        batch_manager: &mut BatchClientManager,
+        input: FileUploadProcessorInput,
+    ) -> Result<(), AppError> {
         let job_id = input.job_id.clone();
         let job_query = with_conn(&self.pool, |conn| repo::get_by_id(conn, &job_id))?;
 
         if job_query.is_none() {
             log::info!("Job (job_id={job_id}) does not exist. Skipping upload.");
-            return Ok(())
+            return Ok(());
         }
         let mut job = job_query.unwrap();
 
-        // Fetch client
-        let s3_client = client_manager.get_client().await?;
+        // Fetch s3 client
+        let s3_client = s3_manager.get_client().await?;
 
         // Upload OCIO files
         let ocio_paths = FileUploadProcessor::scan_for_ocio_files(&input)?;
         for entry in ocio_paths {
             let target_key = entry.target_key;
             log::info!("Uploading OCIO file ({target_key})...");
-            s3::job_file::upload_job_file(s3_client, job_id.clone(), entry.source_path, target_key, |p| self.emit_progress(p)).await?;
+            s3::job_file::upload_job_file(
+                s3_client,
+                job_id.clone(),
+                entry.source_path,
+                target_key,
+                |p| self.emit_progress(p),
+            )
+            .await?;
         }
 
         // Upload blend file
         let blend_path = PathBuf::from(input.file_path);
         let blend_key = "render.blend".to_string();
-        let blend_name = blend_path.file_name().unwrap().to_string_lossy().into_owned();
+        let blend_name = blend_path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
 
         log::info!("Uploading blend file ({blend_name})");
-        s3::job_file::upload_job_file(s3_client, job_id, blend_path, blend_key, |p| self.emit_progress(p)).await?;
+        s3::job_file::upload_job_file(s3_client, job_id, blend_path, blend_key, |p| {
+            self.emit_progress(p)
+        })
+        .await?;
 
         // Update job status
         job.status = JobStatus::Pending;
-        
-        with_transaction(&self.pool, |tx| repo::save(tx, job))?;
+
+        // Fetch batch client
+        let batch_client = batch_manager.get_client().await?;
+
+        // Create dependent resources
+        with_async_transaction(&self.pool, |tx| async move {
+            repo::save(tx, &job)?;
+            self.create_and_submit_tasks(batch_client, tx, &job).await?;
+            Ok(())
+        })
+        .await?;
 
         Ok(())
     }
 
-    fn scan_for_ocio_files(input: &FileUploadProcessorInput) -> Result<Vec<FileScanResult>, AppError> {
+    fn scan_for_ocio_files(
+        input: &FileUploadProcessorInput,
+    ) -> Result<Vec<FileScanResult>, AppError> {
         let mut paths = Vec::new();
         if input.ocio_config_path.is_none() {
             return Ok(paths);
@@ -145,11 +201,11 @@ impl FileUploadProcessor{
                 let path = entry.path();
 
                 // Determine relative path
-                let relative_path = path
-                    .strip_prefix(base_path.to_path_buf())
-                    .map_err(|e| AppError::FileReadError("Could not create relative path.".to_string()))?;
+                let relative_path = path.strip_prefix(base_path.to_path_buf()).map_err(|_e| {
+                    AppError::FileReadError("Could not create relative path.".to_string())
+                })?;
                 let relative_path_str = relative_path.to_string_lossy().into_owned();
-        
+
                 // Check if the entry is a file and has a ".cube" extension
                 if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("cube") {
                     paths.push(FileScanResult {
@@ -161,6 +217,36 @@ impl FileUploadProcessor{
         }
 
         Ok(paths)
+    }
+
+    async fn create_and_submit_tasks(
+        &self,
+        batch_client: &aws_sdk_batch::Client,
+        tx: &rusqlite::Transaction<'_>,
+        job: &RenderJob,
+    ) -> Result<(), AppError> {
+        let frame_start = job.frame_start;
+        let frame_end = frame_start + job.frame_count;
+
+        for frame_number in frame_start..frame_end {
+            let task = RenderTask {
+                id: uuid::Uuid::new_v4().to_string(),
+                job_id: job.id.clone(),
+                frame_number,
+                created_at: Some(chrono::offset::Utc::now()),
+                started_at: None,
+                queued_at: Some(chrono::offset::Utc::now()),
+                completed_at: None,
+                status: TaskStatus::Pending,
+                retry_count: 0,
+            };
+
+            render_task::repo::save(tx, &task)?;
+
+            batch::render_task::submit_job(batch_client, &task).await?;
+        }
+
+        Ok(())
     }
 
     /** Event emission wrappers */

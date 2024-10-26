@@ -1,18 +1,17 @@
-
 use std::sync::Arc;
 
 use std::path::Path;
 
+use super::processor::FileUploadProcessorInput;
+use super::validation;
 use crate::errors::AppError;
-use crate::infra::db::render_job;
 use crate::infra::db::decorator::{with_conn, with_transaction};
 use crate::infra::db::pool::PoolType;
+use crate::infra::db::render_job;
 use crate::infra::db::render_job::entity::{JobStatus, RenderJob};
 use crate::infra::file::parse_file_size_bytes;
 use crate::spec::proto::v1::{self, ListJobsResponseItem};
 use crate::spec::timestamp::to_pb_timestamp;
-use super::processor::FileUploadProcessorInput;
-use super::validation;
 
 pub struct Controller {
     pool: Arc<PoolType>,
@@ -20,8 +19,10 @@ pub struct Controller {
 }
 
 impl Controller {
-
-    pub fn new(pool: Arc<PoolType>, file_upload_queue: Arc<super::processor::FileUploadQueue>) -> Controller {
+    pub fn new(
+        pool: Arc<PoolType>,
+        file_upload_queue: Arc<super::processor::FileUploadQueue>,
+    ) -> Controller {
         Controller {
             pool,
             file_upload_queue,
@@ -29,7 +30,10 @@ impl Controller {
     }
 
     // Create a new render job
-    pub async fn create_job(&self, req: v1::CreateJobRequest) -> Result<v1::CreateJobResponse, AppError> {
+    pub async fn create_job(
+        &self,
+        req: v1::CreateJobRequest,
+    ) -> Result<v1::CreateJobResponse, AppError> {
         // Validation
         validation::can_create_job(&req)?;
 
@@ -38,8 +42,12 @@ impl Controller {
         let blend_file_size_bytes = parse_file_size_bytes(blend_path.to_path_buf()).await?;
         let blend_file_size_mb = blend_file_size_bytes / 1024 / 1024;
 
-        // Parse additional fields 
-        let file_name = blend_path.file_name().unwrap().to_string_lossy().into_owned();
+        // Parse additional fields
+        let file_name = blend_path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
 
         // Persist job
         let job_id = uuid::Uuid::new_v4().to_string();
@@ -59,10 +67,13 @@ impl Controller {
             has_preview: false,
             frame_rendered_count: 0,
         };
-        with_transaction(&self.pool, |tx| render_job::repo::save(tx, job))?;
+        with_transaction(&self.pool, |tx| render_job::repo::save(tx, &job))?;
 
         // Fetch persisted job
-        let job = with_conn(&self.pool, |conn| render_job::repo::get_by_id(conn, &job_id))?.unwrap();
+        let job = with_conn(&self.pool, |conn| {
+            render_job::repo::get_by_id(conn, &job_id)
+        })?
+        .unwrap();
 
         // Enqueue file upload
         let input = FileUploadProcessorInput {
@@ -73,14 +84,18 @@ impl Controller {
 
         self.file_upload_queue.enqueue(input);
 
-        Ok(v1::CreateJobResponse { job_id: "test-id".to_string() })
+        Ok(v1::CreateJobResponse {
+            job_id: "test-id".to_string(),
+        })
     }
 
     pub fn list_jobs(&self, req: v1::ListJobsRequest) -> Result<v1::ListJobsResponse, AppError> {
         let limit = req.limit.unwrap_or(10).min(50);
         let offset = req.offset.unwrap_or(0).max(0);
 
-        let (jobs, count) = with_conn(&self.pool, |conn| render_job::repo::list(conn, limit, offset))?; 
+        let (jobs, count) = with_conn(&self.pool, |conn| {
+            render_job::repo::list(conn, limit, offset)
+        })?;
 
         // Re-format for response type
         let mut response_jobs: Vec<v1::ListJobsResponseItem> = Vec::new();
@@ -102,8 +117,10 @@ impl Controller {
     pub fn get_job(&self, req: v1::GetJobRequest) -> Result<v1::GetJobResponse, AppError> {
         let job_id = req.job_id;
 
-        let job = with_conn(&self.pool, |conn| render_job::repo::get_by_id(conn, &job_id))?;
-    
+        let job = with_conn(&self.pool, |conn| {
+            render_job::repo::get_by_id(conn, &job_id)
+        })?;
+
         if let Some(found_job) = job {
             let response_job = v1::JobDetails {
                 id: job_id,
@@ -122,9 +139,11 @@ impl Controller {
                 has_preview: found_job.has_preview,
             };
 
-            return Ok(v1::GetJobResponse { job: Some(response_job)})
+            return Ok(v1::GetJobResponse {
+                job: Some(response_job),
+            });
         }
 
-        Ok(v1::GetJobResponse { job: None})
+        Ok(v1::GetJobResponse { job: None })
     }
 }

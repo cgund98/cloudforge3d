@@ -4,19 +4,28 @@ use crate::spec::proto::v1;
 use crate::state::AppState;
 
 #[tauri::command]
-pub async fn create_job(input: v1::CreateJobRequest, state: tauri::State<'_, AppState>) -> Result<v1::CreateJobResponse, AppError> {
+pub async fn create_job(
+    input: v1::CreateJobRequest,
+    state: tauri::State<'_, AppState>,
+) -> Result<v1::CreateJobResponse, AppError> {
     let ctrl = state.job_ctrl.as_ref().unwrap();
     ctrl.create_job(input).await
 }
 
 #[tauri::command]
-pub fn list_jobs(input: v1::ListJobsRequest, state: tauri::State<'_, AppState>) -> Result<v1::ListJobsResponse, AppError> {
+pub fn list_jobs(
+    input: v1::ListJobsRequest,
+    state: tauri::State<'_, AppState>,
+) -> Result<v1::ListJobsResponse, AppError> {
     let ctrl = state.job_ctrl.as_ref().unwrap();
     ctrl.list_jobs(input)
 }
 
 #[tauri::command]
-pub fn get_job(input: v1::GetJobRequest, state: tauri::State<'_, AppState>) -> Result<v1::GetJobResponse, AppError> {
+pub fn get_job(
+    input: v1::GetJobRequest,
+    state: tauri::State<'_, AppState>,
+) -> Result<v1::GetJobResponse, AppError> {
     let ctrl = state.job_ctrl.as_ref().unwrap();
     ctrl.get_job(input)
 }

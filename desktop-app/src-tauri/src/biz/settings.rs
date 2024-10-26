@@ -1,20 +1,24 @@
 use std::sync::Arc;
 
-use crate::{errors::AppError, infra::settings::SettingsRepo, spec::proto::v1::{GetAwsCredentialsResponse, UpdateAwsCredentialsCommand}};
-
+use crate::{
+    errors::AppError,
+    infra::settings::SettingsRepo,
+    spec::proto::v1::{GetAwsCredentialsResponse, UpdateAwsCredentialsCommand},
+};
 
 pub struct Controller {
-    repo: Arc<SettingsRepo>
+    repo: Arc<SettingsRepo>,
 }
 
 impl Controller {
     pub fn new(repo: Arc<SettingsRepo>) -> Controller {
-        Controller {
-            repo,
-        }
+        Controller { repo }
     }
 
-    pub async fn update_aws_credentials(&self, input: UpdateAwsCredentialsCommand) -> Result<(), AppError> {
+    pub async fn update_aws_credentials(
+        &self,
+        input: UpdateAwsCredentialsCommand,
+    ) -> Result<(), AppError> {
         log::info!("Updating aws credentials...");
         let mut config = self.repo.get_aws_config().await?;
 

@@ -62,8 +62,7 @@ class CloudDeployStack(Stack):
                 ec2.BlockDevice(
                     device_name="/dev/xvda",
                     volume=ec2.BlockDeviceVolume.ebs(
-                        volume_type=ec2.EbsDeviceVolumeType.GP2,
-                        volume_size=250
+                        volume_type=ec2.EbsDeviceVolumeType.GP2, volume_size=250
                     ),
                 )
             ],

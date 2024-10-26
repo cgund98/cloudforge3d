@@ -1,10 +1,15 @@
-
-use std::{hash::{DefaultHasher, Hash, Hasher}, sync::Arc};
+use std::{
+    hash::{DefaultHasher, Hash, Hasher},
+    sync::Arc,
+};
 
 use aws_config::Region;
 use aws_sdk_s3::config::Credentials;
 
-use crate::{errors::AppError, infra::settings::{AwsConfig, SettingsRepo}};
+use crate::{
+    errors::AppError,
+    infra::settings::{AwsConfig, SettingsRepo},
+};
 
 pub struct S3ClientManager {
     settings_repo: Arc<SettingsRepo>,
@@ -30,10 +35,16 @@ impl S3ClientManager {
     // Return an up-to-date S3 client
     pub async fn get_client(&mut self) -> Result<&aws_sdk_s3::Client, AppError> {
         let config = self.settings_repo.get_aws_config().await?;
-        
+
         // Initialize a new S3 client if credentials have not yet been set
         if self.check_config_change(config.clone()) || self.cur_client.is_none() {
-            let credentials = Credentials::new(config.access_key_id, config.secret_access_key, None, None, "manual");
+            let credentials = Credentials::new(
+                config.access_key_id,
+                config.secret_access_key,
+                None,
+                None,
+                "manual",
+            );
             let region = Region::new(config.region);
             let s3_config = aws_sdk_s3::config::Builder::new()
                 .region(region)
@@ -52,9 +63,9 @@ impl S3ClientManager {
 
         if latest_hash != self.cur_hash {
             self.cur_hash = latest_hash;
-            return false
+            return false;
         }
 
-        return true
+        return true;
     }
 }
