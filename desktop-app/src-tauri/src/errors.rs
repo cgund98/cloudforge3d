@@ -22,8 +22,17 @@ pub enum AppError {
     #[error("500 <|> Unable to complete upload to S3: {0}")]
     S3UploadError(String),
 
+    #[error("500 <|> Unable to read from SQS queue: {0}")]
+    SQSError(String),
+
     #[error("400 <|> Unable to read file from disk: {0}")]
     FileReadError(String),
+
+    #[error("500 <|> Unable decode base64 string: {0}")]
+    Base64DecodeError(#[from] base64::DecodeError),
+
+    #[error("500 <|> Unable decode protobuf: {0}")]
+    ProtobufDecodeError(#[from] prost::DecodeError),
 
     #[error("500 <|> Encountered problem during reading/writing: {0}")]
     IoError(#[from] std::io::Error),

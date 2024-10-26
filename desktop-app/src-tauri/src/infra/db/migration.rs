@@ -36,7 +36,7 @@ pub fn gen_migrations() -> Migrations<'static> {
                 completed_at DATETIME,
                 status VARCHAR(255) CHECK(status IN ('pending', 'running', 'succeeded', 'failed')) NOT NULL,
                 retry_count INTEGER NOT NULL DEFAULT 0,
-                FOREIGN KEY (job_id) REFERENCES render_job(id) -- Foreign key constraint
+                FOREIGN KEY (job_id) REFERENCES render_job(id) ON CASCADE DELETE -- Foreign key constraint
             );
         "),
     ])

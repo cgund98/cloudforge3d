@@ -18,7 +18,7 @@ pub struct RenderJob {
     pub frame_rendered_count: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum JobStatus {
     Uploading,
     UploadFailed,

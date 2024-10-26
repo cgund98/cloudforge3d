@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
 
+use crate::spec::proto::v1;
+
 #[derive(Debug)]
 pub struct RenderTask {
     pub id: String,
@@ -13,8 +15,9 @@ pub struct RenderTask {
     pub retry_count: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TaskStatus {
+    Unknown,
     Pending,
     Running,
     Succeeded,
@@ -26,6 +29,7 @@ impl std::str::FromStr for TaskStatus {
 
     fn from_str(input: &str) -> Result<TaskStatus, Self::Err> {
         match input {
+            "unknown" => Ok(TaskStatus::Unknown),
             "pending" => Ok(TaskStatus::Pending),
             "running" => Ok(TaskStatus::Running),
             "succeeded" => Ok(TaskStatus::Succeeded),
@@ -38,10 +42,23 @@ impl std::str::FromStr for TaskStatus {
 impl ToString for TaskStatus {
     fn to_string(&self) -> String {
         match self {
+            TaskStatus::Unknown => "unknown".to_string(),
             TaskStatus::Pending => "pending".to_string(),
             TaskStatus::Running => "running".to_string(),
             TaskStatus::Succeeded => "succeeded".to_string(),
             TaskStatus::Failed => "failed".to_string(),
+        }
+    }
+}
+
+impl From<v1::TaskStatus> for TaskStatus {
+    fn from(value: v1::TaskStatus) -> Self {
+        match value {
+            v1::TaskStatus::Unspecified => TaskStatus::Unknown,
+            v1::TaskStatus::Pending => TaskStatus::Pending,
+            v1::TaskStatus::Running => TaskStatus::Running,
+            v1::TaskStatus::Succeeded => TaskStatus::Succeeded,
+            v1::TaskStatus::Failed => TaskStatus::Failed,
         }
     }
 }
