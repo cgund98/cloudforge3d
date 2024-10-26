@@ -1,7 +1,7 @@
 <script lang="ts">
   import { mapStatusToColor } from "$lib/data/jobs/transforms";
   import { JobStatus } from "$lib/data/jobState";
-  import { fade } from "svelte/transition";
+  import { fade, fly, scale, slide } from "svelte/transition";
   import OpenIcon from "../../icons/OpenIcon.svelte";
   import { getContext } from "svelte";
   import type { Writable } from "svelte/store";
@@ -50,8 +50,8 @@
 
     <!-- body -->
     <tbody>
-      {#each rows as row}
-        <tr transition:fade>
+      {#each rows as row (row.id)}
+        <tr>
           <td>{row.name}</td>
           <td class="text-right"><div class="capitalize badge badge-outline badge-{mapStatusToColor(row.status)}">{row.status}</div></td>
           <td class="text-right">{formatDate(row.createdAt)}</td>

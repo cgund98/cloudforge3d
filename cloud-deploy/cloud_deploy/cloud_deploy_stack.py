@@ -1,10 +1,13 @@
 from aws_cdk import (
-    Duration, 
-    Stack, 
-    aws_sqs as sqs, 
-    aws_s3 as s3, 
-    aws_iam as iam, 
-    aws_ssm as ssm,
+    Duration,
+    Stack,
+    aws_sqs as sqs,
+    aws_s3 as s3,
+    aws_iam as iam,
+    aws_ec2 as ec2,
+    aws_batch as batch,
+    aws_ecs as ecs,
+    Size,
 )
 
 from constructs import Construct
@@ -18,7 +21,7 @@ class CloudDeployStack(Stack):
         bucket = s3.Bucket(self, "blob-store", bucket_name="cf3d-blob-store")
 
         # Task updates SQS queue
-        sqs.Queue(
+        updates_queue = sqs.Queue(
             self,
             "task-updates",
             queue_name="cf3d-task-updates.fifo",
@@ -26,18 +29,115 @@ class CloudDeployStack(Stack):
             visibility_timeout=Duration.seconds(30),
         )
 
+        vpc = ec2.Vpc(
+            self,
+            "Vpc",
+            vpc_name="cf3d-vpc",
+            max_azs=2,
+            nat_gateways=0,  # No NAT Gateway to save costs
+            subnet_configuration=[
+                ec2.SubnetConfiguration(
+                    name="Public",
+                    subnet_type=ec2.SubnetType.PUBLIC,
+                    cidr_mask=24,
+                ),
+            ],
+        )
+
+        batch_service_role = iam.Role(
+            self,
+            "BatchServiceRole",
+            assumed_by=iam.ServicePrincipal("batch.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSBatchServiceRole"
+                ),
+            ],
+        )
+
+        launch_template = ec2.LaunchTemplate(
+            self,
+            "BatchLaunchTemplate",
+            block_devices=[
+                ec2.BlockDevice(
+                    device_name="/dev/xvda",
+                    volume=ec2.BlockDeviceVolume.ebs(
+                        volume_type=ec2.EbsDeviceVolumeType.GP2,
+                        volume_size=250
+                    ),
+                )
+            ],
+        )
+
+        compute_environment = batch.ManagedEc2EcsComputeEnvironment(
+            self,
+            "SpotComputeEnvironment",
+            compute_environment_name="cf3d-cpu-render-compute-env",
+            vpc=vpc,
+            allocation_strategy=batch.AllocationStrategy.SPOT_CAPACITY_OPTIMIZED,
+            instance_classes=[ec2.InstanceClass.M6I, ec2.InstanceClass.M5],
+            minv_cpus=0,
+            maxv_cpus=96,
+            spot=True,
+            service_role=batch_service_role,
+            launch_template=launch_template,
+        )
+
+        job_queue = batch.JobQueue(
+            self,
+            "JobQueue",
+            job_queue_name="cf3d-job-queue",
+            compute_environments=[
+                batch.OrderedComputeEnvironment(
+                    compute_environment=compute_environment, order=1
+                )
+            ],
+            priority=1,
+        )
+
+        # Create job role
+        job_role = iam.Role(
+            self, "JobRole", assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com")
+        )
+        updates_queue.grant_send_messages(job_role)
+        bucket.grant_read(job_role)
+        bucket.grant_write(job_role)
+
+        region = Stack.of(self).region
+        cpu_job_definition = batch.EcsJobDefinition(
+            self,
+            "MyJobDefinition",
+            job_definition_name="cf3d-cpu-job-definition",
+            container=batch.EcsEc2ContainerDefinition(
+                self,
+                "CpuRenderContainerDef",
+                job_role=job_role,
+                image=ecs.ContainerImage.from_registry(
+                    "cgundlach13/cloudforge3d-blender-cpu-render:v0.1.0"
+                ),
+                memory=Size.mebibytes(1024 * 15),
+                cpu=8,
+                environment={
+                    "AWS_REGION": region,
+                },
+            ),
+        )
+
         # Create user and access keys for the desktop application
         app_user = iam.User(self, "AppUser", user_name="cf3d-app-user")
-        
+
         app_group = iam.Group(self, "AppGroup")
         app_group.add_user(app_user)
 
-        app_group.add_to_policy(iam.PolicyStatement(
-            actions=[
-                "s3:AbortMultipartUpload",
-                "s3:ListBucketMultipartUploads",
-                "s3:PutObject",
-                "s3:GetObject"
-            ],
-            resources=[bucket.bucket_arn, bucket.bucket_arn + "*"]
-        ))
+        app_group.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "s3:AbortMultipartUpload",
+                    "s3:ListBucketMultipartUploads",
+                    "s3:PutObject",
+                    "s3:GetObject",
+                ],
+                resources=[bucket.bucket_arn, bucket.bucket_arn + "*"],
+            )
+        )
+        updates_queue.grant_consume_messages(app_group)
