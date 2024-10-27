@@ -7,6 +7,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::biz;
 use crate::biz::render_job::processor::FileUploadQueue;
+use crate::biz::render_job::thumbnail_generator::{ThumbnailGenerator, ThumbnailGeneratorQueue};
 use crate::infra::batch::client_manager::BatchClientManager;
 use crate::infra::s3::client_manager::S3ClientManager;
 use crate::infra::sqs::client_manager::SqsClientManager;
@@ -17,17 +18,24 @@ use crate::{biz::render_job::processor::FileUploadProcessor, infra::db::init::in
 use super::repo::init_repos;
 
 async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> AppState {
+    let async_handle = Arc::new(processor_handle);
+
     // Initialize tables
     let pool = init_db(handle).unwrap();
     let repos = init_repos(handle).await;
 
     // Initialize queues for process communication
     let file_upload_queue = Arc::new(FileUploadQueue::new());
+    let thumbnail_queue = Arc::new(ThumbnailGeneratorQueue::new());
 
     // Initialize controllers
     let job_ctrl =
         biz::render_job::controller::Controller::new(pool.clone(), file_upload_queue.clone());
-    let task_ctrl = Arc::new(biz::render_task::controller::Controller::new(pool.clone()));
+    let task_ctrl = Arc::new(biz::render_task::controller::Controller::new(
+        pool.clone(),
+        async_handle.clone(),
+        thumbnail_queue.clone(),
+    ));
     let settings_ctrl = biz::settings::Controller::new(repos.settings_repo.clone());
 
     // Initialize state
@@ -39,7 +47,6 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
     // Spawn a separate thread for the file upload processor
     let s3_client_manager = S3ClientManager::new(repos.settings_repo.clone());
     let batch_client_manager = BatchClientManager::new(repos.settings_repo.clone());
-    let async_handle = Arc::new(processor_handle);
     let processor = FileUploadProcessor::new(
         pool.clone(),
         file_upload_queue.clone(),
@@ -54,14 +61,20 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
 
     // Spawn a separate thread for the task update consumer
     let sqs_client_manager = SqsClientManager::new(repos.settings_repo.clone());
+    let listener_s3_manager = S3ClientManager::new(repos.settings_repo.clone());
     let mut updates_consumer =
         task_status_update::TaskStatusUpdateConsumer::new(async_handle.clone());
 
     tokio::spawn(async move {
         updates_consumer
-            .listen_for_task_status_updates(sqs_client_manager, &task_ctrl)
+            .listen_for_task_status_updates(sqs_client_manager, listener_s3_manager, &task_ctrl)
             .await
     });
+
+    // Spawn a separate thread for thumbnail generation
+    let thumbnail_generator =
+        ThumbnailGenerator::new(pool.clone(), thumbnail_queue.clone(), async_handle.clone());
+    tokio::spawn(async move { thumbnail_generator.start_task().await });
 
     state
 }

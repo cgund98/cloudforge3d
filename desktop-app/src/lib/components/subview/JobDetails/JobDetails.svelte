@@ -13,7 +13,7 @@
   import type { Writable } from "svelte/store";
   import { getJob, type JobDetails } from "$lib/data/jobs/commands/getJob";
   import { listen } from "@tauri-apps/api/event";
-  import { EventName } from "$lib/data/tasks/events";
+  import { EventName, type JobStatusUpdateEvent } from "$lib/data/jobs/events";
 
   let status: JobStatus = JobStatus.Pending;
 
@@ -39,8 +39,11 @@
   let unMountFn = () => {};
   const init = async () => {
     const unlisten = await listen<string>(
-      EventName.TASK_STATUS_UPDATE,
-      () => job?.id ? fetch(job.id) : null
+      EventName.JOB_STATUS_UPDATE,
+      (e) => {
+        const event = JSON.parse(e.payload) as JobStatusUpdateEvent;
+        if (job?.id !== null && event.jobId === job?.id) fetch(job.id);
+      }
     );
     unMountFn = unlisten;
   };

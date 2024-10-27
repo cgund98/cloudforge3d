@@ -16,7 +16,7 @@
   let lastUpdated = new Date();
 
   // How long will the element remain visible for once it hasn't been updated.
-  const LIFESPAN_MS = 3000;
+  const LIFESPAN_MS = 5000;
 
   let alerts = getContext(ContextKeys.ALERTS) as Writable<AlertItem[]>;
 
@@ -41,7 +41,7 @@
         setTimeout(() => {
           const timeSinceUpdate = Date.now() - lastUpdated.getTime();
 
-          if (timeSinceUpdate > LIFESPAN_MS - 1) curEvent = null;
+          if (timeSinceUpdate > LIFESPAN_MS - 100) curEvent = null;
         }, LIFESPAN_MS);
       }
     );

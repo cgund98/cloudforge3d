@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::io::Write;
+use std::{fs, path::PathBuf};
 
 use aws_sdk_s3::{
     operation::create_multipart_upload::CreateMultipartUploadOutput,
@@ -21,8 +22,12 @@ pub struct Progress {
 }
 
 // Construct the path for a job input file
-fn generate_input_path(job_id: String, key: String) -> String {
+fn generate_input_path(job_id: &str, key: &str) -> String {
     format!("jobs/{job_id}/inputs/{key}")
+}
+
+fn generate_output_path(job_id: &str, key: &str) -> String {
+    format!("jobs/{job_id}/outputs/{key}")
 }
 
 // Read file metadata and determine number of chunks
@@ -57,7 +62,7 @@ pub async fn upload_job_file(
     progress_callback: impl Fn(Progress) -> Result<(), AppError>,
 ) -> Result<(), AppError> {
     // Generate object path
-    let upload_path = generate_input_path(job_id.clone(), target_key.clone());
+    let upload_path = generate_input_path(&job_id, &target_key);
 
     let file_name = source_path
         .file_name()
@@ -149,4 +154,59 @@ pub async fn upload_job_file(
         .map_err(|e| AppError::S3UploadError(format!("{e}")))?;
 
     Ok(())
+}
+
+// Download a job output file from S3
+pub async fn download_job_file(
+    client: &aws_sdk_s3::Client,
+    job_id: String,
+    source_key: String,
+    output_path: PathBuf,
+) -> Result<usize, AppError> {
+    let source_path = generate_output_path(&job_id, &source_key);
+
+    // Delete existing file if it exists
+    if output_path.exists() {
+        fs::remove_file(output_path.clone())
+            .inspect_err(|e| log::error!("Unable to remove existing file: {e}"))?;
+    }
+
+    // Create parent path if not exists
+    if let Some(parent_path) = output_path.parent() {
+        if !parent_path.exists() {
+            fs::create_dir_all(parent_path).inspect_err(|e| {
+                log::error!("Unable to create job file directory '{parent_path:?}': {e}")
+            })?;
+        }
+    }
+
+    log::info!("Downloading file from s3 ({source_path})...");
+
+    let mut file = fs::File::create(output_path)?;
+
+    let mut object = client
+        .get_object()
+        .bucket(BUCKET_NAME)
+        .key(&source_path)
+        .send()
+        .await
+        .map_err(|e| AppError::S3DownloadError(format!("{e}")))?;
+
+    let mut byte_count = 0_usize;
+    while let Some(bytes) = object.body.try_next().await.map_err(|err| {
+        AppError::S3DownloadError(format!("Failed to read from S3 download stream: {err:?}"))
+    })? {
+        let bytes_len = bytes.len();
+        file.write_all(&bytes).map_err(|err| {
+            AppError::S3DownloadError(format!(
+                "Failed to write from S3 download stream to local file: {err:?}"
+            ))
+        })?;
+        byte_count += bytes_len;
+    }
+
+    let kb_count = byte_count / 1024;
+    log::info!("Done downloading file of size ({kb_count} kB) from s3 ({source_path})...");
+
+    Ok(byte_count)
 }

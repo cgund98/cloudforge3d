@@ -21,7 +21,7 @@ use crate::{
         },
         s3::{self, client_manager::S3ClientManager},
     },
-    interface::events::{emit_job_file_upload_progress_event, emit_task_status_update_event},
+    interface::events::{emit_job_file_upload_progress_event, emit_job_status_update_event},
     spec::proto::v1::{self, JobFileUploadProgressEvent},
 };
 
@@ -177,11 +177,7 @@ impl FileUploadProcessor {
             self.create_tasks(&tx, &job)
         })?;
 
-        let fake_update = v1::TaskStatusUpdate {
-            task_id: "fake-id".to_string(),
-            status: v1::TaskStatus::Pending.into(),
-        };
-        emit_task_status_update_event(&self.handle, &fake_update)?;
+        emit_job_status_update_event(&self.handle, &job.id)?;
 
         // Submit batch jobs
         log::info!("Submitting jobs...");

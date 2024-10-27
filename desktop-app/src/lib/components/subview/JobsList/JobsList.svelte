@@ -3,7 +3,7 @@
   import { createJob } from "$lib/data/jobs/commands/createJob";
   import type { ListJobsItem } from "$lib/data/jobs/commands/listJobs";
   import { listJobs } from "$lib/data/jobs/commands/listJobs";
-  import { EventName } from "$lib/data/tasks/events";
+  import { EventName } from "$lib/data/jobs/events";
   import { listen } from "@tauri-apps/api/event";
   import { onDestroy } from "svelte";
 
@@ -31,7 +31,7 @@
   const init = async () => {
     fetch();
     const unlisten = await listen<string>(
-      EventName.TASK_STATUS_UPDATE,
+      EventName.JOB_STATUS_UPDATE,
       () => fetch()
     );
     unMountFn = unlisten;

@@ -18,7 +18,7 @@ export const createJob = async () => {
   const input: CreateJobRequest = {
     filePath: "/Users/callum/Downloads/cube.blend",
     frameStart: 1,
-    frameCount: 1,
+    frameCount: 5,
     frameRate: 24,
     downloadPath: "/tmp",
     ocioConfigPath: "/Users/callum/art/config/ocio/PBR_Neutral/config.ocio",

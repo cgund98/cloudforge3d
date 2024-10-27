@@ -10,7 +10,7 @@ pub async fn submit_job(client: &aws_sdk_batch::Client, task: &RenderTask) -> Re
     let job_id = task.job_id.clone();
     let task_id = task.id.clone();
 
-    let job_name = format!("cf3d-{job_id}-{task_id}");
+    let job_name = format!("cf3d-{task_id}");
 
     let environment: Vec<KeyValuePair> = vec![
         KeyValuePair::builder()

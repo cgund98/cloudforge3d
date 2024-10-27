@@ -22,6 +22,9 @@ pub enum AppError {
     #[error("500 <|> Unable to complete upload to S3: {0}")]
     S3UploadError(String),
 
+    #[error("500 <|> Unable to complete download from S3: {0}")]
+    S3DownloadError(String),
+
     #[error("500 <|> Unable to read from SQS queue: {0}")]
     SQSError(String),
 
@@ -48,6 +51,12 @@ pub enum AppError {
 
     #[error("500 <|> Unable to call Tauri API: {0}")]
     TauriError(#[from] tauri::Error),
+
+    #[error("500 <|> Unable to convert file to image: {0}")]
+    ImageError(#[from] image::ImageError),
+
+    #[error("500 <|> Unable to encode gif: {0}")]
+    GifEncodeError(#[from] gif::EncodingError),
 }
 
 #[derive(Serialize)]

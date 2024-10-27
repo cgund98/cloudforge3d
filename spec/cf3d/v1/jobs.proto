@@ -94,3 +94,7 @@ message JobFileUploadProgressEvent {
   bool is_done = 6;
   optional string description = 7;
 }
+
+message JobStatusUpdateEvent {
+  string job_id = 1;
+}
