@@ -6,9 +6,13 @@ export enum TaskStatus {
 }
 
 export interface Task {
-  status: TaskStatus;
+  id: string;
+  jobId: string;
   frameNumber: number;
-  queuedAt: Date;
+  createdAt?: Date;
   startedAt?: Date;
+  queuedAt?: Date;
   completedAt?: Date;
+  status: TaskStatus;
+  retryCount: number;
 }

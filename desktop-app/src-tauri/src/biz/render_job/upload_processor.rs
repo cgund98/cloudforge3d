@@ -22,7 +22,7 @@ use crate::{
         s3::{self, client_manager::S3ClientManager},
     },
     interface::events::{emit_job_file_upload_progress_event, emit_job_status_update_event},
-    spec::proto::v1::{self, JobFileUploadProgressEvent},
+    spec::proto::v1::JobFileUploadProgressEvent,
 };
 
 // Type alias for a deadqueue Queue
@@ -166,6 +166,8 @@ impl FileUploadProcessor {
 
         // Update job status
         job.status = JobStatus::Pending;
+        let now = chrono::offset::Utc::now();
+        job.queued_at = Some(now);
 
         // Fetch batch client
         let batch_client = batch_manager.get_client().await?;

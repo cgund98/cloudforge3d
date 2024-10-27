@@ -62,3 +62,15 @@ impl From<v1::TaskStatus> for TaskStatus {
         }
     }
 }
+
+impl Into<v1::TaskStatus> for TaskStatus {
+    fn into(self) -> v1::TaskStatus {
+        match self {
+            TaskStatus::Unknown => v1::TaskStatus::Unspecified,
+            TaskStatus::Pending => v1::TaskStatus::Pending,
+            TaskStatus::Running => v1::TaskStatus::Running,
+            TaskStatus::Succeeded => v1::TaskStatus::Succeeded,
+            TaskStatus::Failed => v1::TaskStatus::Failed,
+        }
+    }
+}

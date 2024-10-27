@@ -2,8 +2,7 @@
   import RefreshIcon from "$lib/components/display/icons/RefreshIcon.svelte";
   import StopIcon from "$lib/components/display/icons/StopIcon.svelte";
   import XIcon from "$lib/components/display/icons/XIcon.svelte";
-  import { mapStatusToColor } from "$lib/data/jobs/transforms";
-  import { isCompleted, JobStatus } from "$lib/data/jobState";
+  import { isCompleted, JobStatus, type Job } from "$lib/data/jobs/job";
   import { getContext, onDestroy } from "svelte";
   import ExportsSection from "./sections/exports/ExportsSection.svelte";
   import PreviewSection from "./sections/preview/PreviewSection.svelte";
@@ -14,24 +13,29 @@
   import { getJob, type JobDetails } from "$lib/data/jobs/commands/getJob";
   import { listen } from "@tauri-apps/api/event";
   import { EventName, type JobStatusUpdateEvent } from "$lib/data/jobs/events";
+  import { listTasks } from "$lib/data/tasks/commands/listTasks";
+  import type { Task } from "$lib/data/tasks/task";
+  import { mapJobStatusToColor } from "$lib/data/jobs/transforms";
 
-  let status: JobStatus = JobStatus.Pending;
-
-  let job: JobDetails | null = null;
+  let job: Job | null = null;
+  let tasks: Task[] = [];
 
   const selectedJobId = getContext(
     ContextKeys.SELECTED_JOB_ID
   ) as Writable<string>;
 
-  const fetch = (jobId: string) =>
+  const fetch = (jobId: string) => {
     getJob({ jobId }).then((res) => {
-      if (res.job === null || res.job === undefined) {
+      if (res === null || res === undefined) {
         job = null;
         return;
       }
 
-      job = res.job;
-    });
+      job = res;
+    }).catch(console.error);
+
+    listTasks({jobId}).then((res) => tasks = res).catch(console.error);
+  }
 
   selectedJobId.subscribe((jobId) => fetch(jobId));
 
@@ -62,7 +66,7 @@
       <div class="flex items-center space-x-2">
         <div class="tooltip tooltip-bottom capitalize" data-tip={job.status}>
           <div
-            class="badge badge-{mapStatusToColor(job.status)} badge-xs"
+            class="badge badge-{mapJobStatusToColor(job.status)} badge-xs"
           ></div>
         </div>
         <div class="prose">
@@ -78,11 +82,13 @@
             </button>
           </div>
         {/if}
+        {#if job.status === JobStatus.Failed}
         <div class="tooltip tooltip-bottom" data-tip="Retry Failed Tasks">
           <button class="btn btn-ghost btn-sm btn-square">
             <RefreshIcon />
           </button>
         </div>
+        {/if}
 
         <div class="tooltip tooltip-bottom" data-tip="Close">
           <button
@@ -100,7 +106,9 @@
     <div class="flex flex-col space-y-4">
       <PreviewSection />
 
-      <RenderProgressSection />
+      {#if job.status !== JobStatus.Uploading && job.status !== JobStatus.UploadFailed}
+      <RenderProgressSection {job} tasks={tasks} />
+      {/if}
 
       <PropertiesSection {job} />
 

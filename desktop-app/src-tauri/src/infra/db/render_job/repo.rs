@@ -79,6 +79,18 @@ pub fn list(conn: &ConnType, limit: u32, offset: u32) -> Result<(Vec<RenderJob>,
     Ok((entries, count))
 }
 
+pub fn set_has_preview(
+    tx: &rusqlite::Transaction,
+    job_id: &str,
+    has_preview: bool,
+) -> Result<(), AppError> {
+    let sql: &str = "UPDATE render_job SET has_preview = ? WHERE id = ?";
+
+    tx.execute(sql, (has_preview, job_id))?;
+
+    Ok(())
+}
+
 // Persist a RenderJob to the database
 pub fn save(tx: &rusqlite::Transaction, job: &RenderJob) -> Result<(), AppError> {
     // SQL statement

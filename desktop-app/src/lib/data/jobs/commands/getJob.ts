@@ -1,4 +1,5 @@
-import type { JobStatus } from "$lib/data/jobState";
+import { parseProtoDate } from "$lib/data/date";
+import type { Job, JobStatus } from "../job";
 import { invoke } from "@tauri-apps/api/core";
 
 export interface GetJobRequest {
@@ -29,7 +30,22 @@ export interface GetJobResponse {
 export const getJob = async (input: GetJobRequest) => {
   const result = await invoke("get_job", { input });
 
-  console.log(result);
+  const raw = result as GetJobResponse;
 
-  return result as GetJobResponse;
+  const parsed: Job | undefined = raw.job
+    ? {
+        ...raw.job,
+        createdAt: raw.job.createdAt
+          ? parseProtoDate(raw.job.createdAt)
+          : undefined,
+        queuedAt: raw.job.queuedAt
+          ? parseProtoDate(raw.job.queuedAt)
+          : undefined,
+        completedAt: raw.job.completedAt
+          ? parseProtoDate(raw.job.completedAt)
+          : undefined,
+      }
+    : undefined;
+
+  return parsed;
 };

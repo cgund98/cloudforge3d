@@ -1,5 +1,6 @@
 <script lang="ts">
   import JobsTable from "$lib/components/display/tables/jobsTable/JobsTable.svelte";
+  import { parseProtoDate } from "$lib/data/date";
   import { createJob } from "$lib/data/jobs/commands/createJob";
   import type { ListJobsItem } from "$lib/data/jobs/commands/listJobs";
   import { listJobs } from "$lib/data/jobs/commands/listJobs";
@@ -64,7 +65,7 @@
   <JobsTable
     rows={jobs.map((job) => ({
       ...job,
-      createdAt: new Date(job.createdAt.slice(0, 23) + "Z"),
+      createdAt: parseProtoDate(job.createdAt),
     }))}
   />
 

@@ -1,4 +1,4 @@
-import type { JobStatus } from "$lib/data/jobState";
+import type { JobStatus } from "../job";
 import { invoke } from "@tauri-apps/api/core";
 
 export interface ListJobsRequest {
@@ -20,8 +20,6 @@ export interface ListJobsResponse {
 
 export const listJobs = async (input: ListJobsRequest) => {
   const result = await invoke("list_jobs", { input });
-
-  console.log(result);
 
   return result as ListJobsResponse;
 };

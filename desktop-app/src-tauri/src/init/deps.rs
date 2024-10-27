@@ -6,14 +6,14 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
 use crate::biz;
-use crate::biz::render_job::processor::FileUploadQueue;
 use crate::biz::render_job::thumbnail_generator::{ThumbnailGenerator, ThumbnailGeneratorQueue};
+use crate::biz::render_job::upload_processor::FileUploadQueue;
 use crate::infra::batch::client_manager::BatchClientManager;
 use crate::infra::s3::client_manager::S3ClientManager;
 use crate::infra::sqs::client_manager::SqsClientManager;
 use crate::infra::sqs::task_status_update;
 use crate::state::AppState;
-use crate::{biz::render_job::processor::FileUploadProcessor, infra::db::init::init_db};
+use crate::{biz::render_job::upload_processor::FileUploadProcessor, infra::db::init::init_db};
 
 use super::repo::init_repos;
 

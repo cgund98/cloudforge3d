@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { mapStatusToColor } from "$lib/data/jobs/transforms";
-  import { JobStatus } from "$lib/data/jobState";
+  import { mapJobStatusToColor } from "$lib/data/jobs/transforms";
+  import { JobStatus } from "$lib/data/jobs/job";
   import { fade, fly, scale, slide } from "svelte/transition";
   import OpenIcon from "../../icons/OpenIcon.svelte";
   import { getContext } from "svelte";
@@ -53,7 +53,7 @@
       {#each rows as row (row.id)}
         <tr>
           <td>{row.name}</td>
-          <td class="text-right"><div class="capitalize badge badge-outline badge-{mapStatusToColor(row.status)}">{row.status}</div></td>
+          <td class="text-right"><div class="capitalize badge badge-outline badge-{mapJobStatusToColor(row.status)}">{row.status}</div></td>
           <td class="text-right">{formatDate(row.createdAt)}</td>
           <td class="text-right">
             <button class="btn btn-ghost btn-sm btn-square" onclick={() => selectedJobId.set(row.id)}>

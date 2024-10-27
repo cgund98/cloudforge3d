@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use std::path::Path;
 
-use super::processor::FileUploadProcessorInput;
+use super::upload_processor::FileUploadProcessorInput;
 use super::validation;
 use crate::errors::AppError;
 use crate::infra::db::decorator::{with_conn, with_transaction};
@@ -15,13 +15,13 @@ use crate::spec::timestamp::to_pb_timestamp;
 
 pub struct Controller {
     pool: Arc<PoolType>,
-    file_upload_queue: Arc<super::processor::FileUploadQueue>,
+    file_upload_queue: Arc<super::upload_processor::FileUploadQueue>,
 }
 
 impl Controller {
     pub fn new(
         pool: Arc<PoolType>,
-        file_upload_queue: Arc<super::processor::FileUploadQueue>,
+        file_upload_queue: Arc<super::upload_processor::FileUploadQueue>,
     ) -> Controller {
         Controller {
             pool,

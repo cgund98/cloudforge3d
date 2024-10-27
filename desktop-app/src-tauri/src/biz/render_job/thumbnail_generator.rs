@@ -126,7 +126,7 @@ impl ThumbnailGenerator {
         if job_opt.is_none() {
             return Err(AppError::NotFound(format!("id = {job_id}")));
         }
-        let mut job = job_opt.unwrap();
+        let job = job_opt.unwrap();
 
         // Generate thumbnail path
         let data_dir = self.handle.path().app_data_dir().unwrap();
@@ -137,8 +137,9 @@ impl ThumbnailGenerator {
             .unwrap_or(false);
 
         if did_generate_thumbnail {
-            job.has_preview = true;
-            with_transaction(&self.pool, |tx| render_job::repo::save(tx, &job))?;
+            with_transaction(&self.pool, |tx| {
+                render_job::repo::set_has_preview(tx, &job_id, true)
+            })?;
             emit_job_status_update_event(&self.handle, &job.id)?;
         }
 

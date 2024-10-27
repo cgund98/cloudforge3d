@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package cf3d.v1;
 
+import "google/protobuf/timestamp.proto";
+
 /** Enums **/
 
 enum TaskStatus {
@@ -17,6 +19,28 @@ enum TaskStatus {
 message TaskStatusUpdate {
   string task_id = 1;
   TaskStatus status = 2;
+}
+
+/** Queries */
+
+message ListTasksRequest {
+  string job_id = 1;
+}
+
+message TaskDetails {
+  string id = 1;
+  string job_id = 2;
+  int32 frame_number = 3;
+  optional google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp started_at = 5;
+  optional google.protobuf.Timestamp queued_at = 6;
+  optional google.protobuf.Timestamp completed_at = 7;
+  string status = 8;
+  int32 retry_count = 9;
+}
+
+message ListTasksResponse {
+  repeated TaskDetails tasks = 1;
 }
 
 /** Mutations **/

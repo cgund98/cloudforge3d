@@ -14,7 +14,7 @@ use crate::{
         s3::job_file::download_job_file,
     },
     interface::events::emit_job_status_update_event,
-    spec::proto::v1,
+    spec::{proto::v1, timestamp::to_pb_timestamp},
 };
 
 pub struct Controller {
@@ -34,6 +34,38 @@ impl Controller {
             handle,
             thumbnail_queue,
         }
+    }
+
+    pub fn list_tasks(
+        &self,
+        input: v1::ListTasksRequest,
+    ) -> Result<v1::ListTasksResponse, AppError> {
+        let tasks = with_conn(&self.pool, |conn| {
+            render_task::repo::list_by_job_id(conn, &input.job_id)
+        })?;
+
+        let mut response_tasks: Vec<v1::TaskDetails> = Vec::new();
+        for task in tasks {
+            let response_task = v1::TaskDetails {
+                id: task.id,
+                job_id: task.job_id,
+                frame_number: task.frame_number,
+                created_at: task.created_at.map(to_pb_timestamp),
+                queued_at: task.queued_at.map(to_pb_timestamp),
+                started_at: task.started_at.map(to_pb_timestamp),
+                completed_at: task.completed_at.map(to_pb_timestamp),
+                status: task.status.to_string(),
+                retry_count: task.retry_count,
+            };
+
+            response_tasks.push(response_task);
+        }
+
+        let response = v1::ListTasksResponse {
+            tasks: response_tasks,
+        };
+
+        Ok(response)
     }
 
     pub async fn handle_status_update(
@@ -96,10 +128,11 @@ impl Controller {
         } else if task.status == render_task::entity::TaskStatus::Running && !job_failed {
             job.status = render_job::entity::JobStatus::Running;
         } else if task.status == render_task::entity::TaskStatus::Succeeded {
-            job.frame_rendered_count += 1;
+            job.frame_rendered_count = job.frame_count - remaining_task_count as i32;
 
             if other_tasks_complete {
                 job.status = render_job::entity::JobStatus::Succeeded;
+                job.completed_at = Some(now);
             }
         }
 
