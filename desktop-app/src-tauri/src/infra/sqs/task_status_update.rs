@@ -15,7 +15,7 @@ use super::client_manager::SqsClientManager;
 const CLIENT_FAILURE_BACKOFF: core::time::Duration = time::Duration::from_secs(20);
 const MESSAGE_FAILURE_BACKOFF: core::time::Duration = time::Duration::from_secs(3);
 
-const MAX_MESSAGES: i32 = 5;
+const MAX_MESSAGES: i32 = 10;
 const QUEUE_NAME: &str = "cf3d-task-updates.fifo";
 
 pub struct TaskStatusUpdateConsumer {
