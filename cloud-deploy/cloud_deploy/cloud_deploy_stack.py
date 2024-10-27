@@ -71,7 +71,7 @@ class CloudDeployStack(Stack):
         compute_environment = batch.ManagedEc2EcsComputeEnvironment(
             self,
             "SpotComputeEnvironment",
-            compute_environment_name="cf3d-cpu-render-compute-env",
+            compute_environment_name="cf3d-cpu-render-env",
             vpc=vpc,
             allocation_strategy=batch.AllocationStrategy.SPOT_CAPACITY_OPTIMIZED,
             instance_classes=[ec2.InstanceClass.M6I, ec2.InstanceClass.M5],
@@ -82,7 +82,7 @@ class CloudDeployStack(Stack):
             launch_template=launch_template,
         )
 
-        job_queue = batch.JobQueue(
+        batch.JobQueue(
             self,
             "JobQueue",
             job_queue_name="cf3d-job-queue",
@@ -103,7 +103,8 @@ class CloudDeployStack(Stack):
         bucket.grant_write(job_role)
 
         region = Stack.of(self).region
-        cpu_job_definition = batch.EcsJobDefinition(
+        account = Stack.of(self).account
+        batch.EcsJobDefinition(
             self,
             "MyJobDefinition",
             job_definition_name="cf3d-cpu-job-definition",
@@ -137,6 +138,23 @@ class CloudDeployStack(Stack):
                     "s3:GetObject",
                 ],
                 resources=[bucket.bucket_arn, bucket.bucket_arn + "*"],
+            )
+        )
+
+        app_group.add_to_policy(
+            iam.PolicyStatement(
+                actions=["batch:SubmitJob"],
+                resources=[
+                    f"arn:aws:batch:{region}:{account}:job-definition/cf3d*",
+                    f"arn:aws:batch:{region}:{account}:job-queue/cf3d*",
+                ],
+            )
+        )
+
+        # Optionally, allow the role to list job queues if needed
+        app_group.add_to_policy(
+            iam.PolicyStatement(
+                actions=["batch:Describe*", "batch:List*"], resources=["*"]
             )
         )
         updates_queue.grant_consume_messages(app_group)

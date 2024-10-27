@@ -8,7 +8,7 @@ use crate::{
     infra::{
         batch::{self, client_manager::BatchClientManager},
         db::{
-            decorator::{with_async_transaction, with_conn},
+            decorator::{with_conn, with_transaction},
             pool::PoolType,
             render_job::{
                 entity::{JobStatus, RenderJob},
@@ -21,8 +21,8 @@ use crate::{
         },
         s3::{self, client_manager::S3ClientManager},
     },
-    interface::events::emit_job_file_upload_progress_event,
-    spec::proto::v1::JobFileUploadProgressEvent,
+    interface::events::{emit_job_file_upload_progress_event, emit_task_status_update_event},
+    spec::proto::v1::{self, JobFileUploadProgressEvent},
 };
 
 // Type alias for a deadqueue Queue
@@ -102,7 +102,9 @@ impl FileUploadProcessor {
                 .await;
 
             // We don't want to exit in case of failure. Re-queue the upload and try again.
-            result.unwrap_or_else(|f| {
+            result
+                .inspect(|_| log::info!("Handled file upload for job (job_id={job_id})."))
+                .unwrap_or_else(|f| {
                 log::error!("Encountered unexpected error when handling file upload for job (job_id={job_id}): {f}");
                 self.queue.enqueue(input);
                 self.emit_failed_progress(job_id, file_path);
@@ -169,12 +171,21 @@ impl FileUploadProcessor {
         let batch_client = batch_manager.get_client().await?;
 
         // Create dependent resources
-        with_async_transaction(&self.pool, |tx| async move {
-            repo::save(tx, &job)?;
-            self.create_and_submit_tasks(batch_client, tx, &job).await?;
-            Ok(())
-        })
-        .await?;
+        log::info!("Persisting job and creating tasks...");
+        let tasks = with_transaction(&self.pool, |tx| {
+            repo::save(&tx, &job)?;
+            self.create_tasks(&tx, &job)
+        })?;
+
+        let fake_update = v1::TaskStatusUpdate {
+            task_id: "fake-id".to_string(),
+            status: v1::TaskStatus::Pending.into(),
+        };
+        emit_task_status_update_event(&self.handle, &fake_update)?;
+
+        // Submit batch jobs
+        log::info!("Submitting jobs...");
+        self.submit_tasks(batch_client, tasks).await?;
 
         Ok(())
     }
@@ -219,18 +230,31 @@ impl FileUploadProcessor {
         Ok(paths)
     }
 
-    async fn create_and_submit_tasks(
+    async fn submit_tasks(
         &self,
         batch_client: &aws_sdk_batch::Client,
+        tasks: Vec<RenderTask>,
+    ) -> Result<(), AppError> {
+        for task in tasks {
+            batch::render_task::submit_job(batch_client, &task).await?;
+        }
+
+        Ok(())
+    }
+
+    fn create_tasks(
+        &self,
         tx: &rusqlite::Transaction<'_>,
         job: &RenderJob,
-    ) -> Result<(), AppError> {
+    ) -> Result<Vec<RenderTask>, AppError> {
         let frame_start = job.frame_start;
         let frame_end = frame_start + job.frame_count;
 
+        let mut tasks = Vec::new();
+
         for frame_number in frame_start..frame_end {
             let task = RenderTask {
-                id: uuid::Uuid::new_v4().to_string(),
+                id: job.id.clone() + "-frame-" + &frame_number.to_string(),
                 job_id: job.id.clone(),
                 frame_number,
                 created_at: Some(chrono::offset::Utc::now()),
@@ -243,10 +267,10 @@ impl FileUploadProcessor {
 
             render_task::repo::save(tx, &task)?;
 
-            batch::render_task::submit_job(batch_client, &task).await?;
+            tasks.push(task);
         }
 
-        Ok(())
+        Ok(tasks)
     }
 
     /** Event emission wrappers */
@@ -264,7 +288,7 @@ impl FileUploadProcessor {
             description: Some("Upload in progress".to_string()),
         };
 
-        emit_job_file_upload_progress_event(self.handle.as_ref(), event)
+        emit_job_file_upload_progress_event(self.handle.as_ref(), &event)
     }
 
     fn emit_failed_progress(&self, job_id: String, file_name: String) {
@@ -278,8 +302,9 @@ impl FileUploadProcessor {
             description: Some("Upload failed".to_string()),
         };
 
-        let _ = emit_job_file_upload_progress_event(self.handle.as_ref(), event).inspect_err(|e| {
-            log::error!("Error while publishing upload fail event: {e}");
-        });
+        let _ =
+            emit_job_file_upload_progress_event(self.handle.as_ref(), &event).inspect_err(|e| {
+                log::error!("Error while publishing upload fail event: {e}");
+            });
     }
 }

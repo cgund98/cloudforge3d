@@ -39,7 +39,12 @@ pub async fn submit_job(client: &aws_sdk_batch::Client, task: &RenderTask) -> Re
         .container_overrides(overrides)
         .send()
         .await
-        .map_err(|e| AppError::BatchError(format!("{e}")))?;
+        .map_err(|e| {
+            if let Some(err) = e.as_service_error() {
+                return AppError::BatchError(format!("{err}"));
+            }
+            AppError::BatchError(format!("{e}"))
+        })?;
 
     Ok(())
 }

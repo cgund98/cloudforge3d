@@ -10,6 +10,7 @@ tauri-dev:
 format:
 	@cd desktop-app/src-tauri && cargo fmt --all
 	@pre-commit run --all-files
+	@buf format -w
 
 .PHONY: format
 .PHONY: build

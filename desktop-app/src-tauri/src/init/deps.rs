@@ -7,6 +7,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::biz;
 use crate::biz::render_job::processor::FileUploadQueue;
+use crate::infra::batch::client_manager::BatchClientManager;
 use crate::infra::s3::client_manager::S3ClientManager;
 use crate::infra::sqs::client_manager::SqsClientManager;
 use crate::infra::sqs::task_status_update;
@@ -37,17 +38,24 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
     };
     // Spawn a separate thread for the file upload processor
     let s3_client_manager = S3ClientManager::new(repos.settings_repo.clone());
+    let batch_client_manager = BatchClientManager::new(repos.settings_repo.clone());
+    let async_handle = Arc::new(processor_handle);
     let processor = FileUploadProcessor::new(
         pool.clone(),
         file_upload_queue.clone(),
-        Arc::new(processor_handle),
+        async_handle.clone(),
     );
 
-    tokio::spawn(async move { processor.start_task(s3_client_manager).await });
+    tokio::spawn(async move {
+        processor
+            .start_task(s3_client_manager, batch_client_manager)
+            .await
+    });
 
     // Spawn a separate thread for the task update consumer
     let sqs_client_manager = SqsClientManager::new(repos.settings_repo.clone());
-    let mut updates_consumer = task_status_update::TaskStatusUpdateConsumer::new();
+    let mut updates_consumer =
+        task_status_update::TaskStatusUpdateConsumer::new(async_handle.clone());
 
     tokio::spawn(async move {
         updates_consumer

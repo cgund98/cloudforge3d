@@ -3,6 +3,9 @@
   import { createJob } from "$lib/data/jobs/commands/createJob";
   import type { ListJobsItem } from "$lib/data/jobs/commands/listJobs";
   import { listJobs } from "$lib/data/jobs/commands/listJobs";
+  import { EventName } from "$lib/data/tasks/events";
+  import { listen } from "@tauri-apps/api/event";
+  import { onDestroy } from "svelte";
 
   let page: number = $state(0);
   let pageCount = 0;
@@ -23,7 +26,23 @@
       .catch(console.error);
   };
 
-  fetch();
+  // Start listening for status events
+  let unMountFn = () => {};
+  const init = async () => {
+    fetch();
+    const unlisten = await listen<string>(
+      EventName.TASK_STATUS_UPDATE,
+      () => fetch()
+    );
+    unMountFn = unlisten;
+  };
+
+  init();
+
+  onDestroy(() => {
+    unMountFn();
+  });
+
 </script>
 
 <div class="px-4 pt-8 flex flex-col flex-1">
@@ -36,7 +55,7 @@
       <button
         class="join-item btn btn-sm btn-primary"
         onclick={() => {
-          createJob().then(console.log).catch(console.error);
+          createJob().then(fetch).catch(console.error);
         }}>Create Job</button
       >
     </div>

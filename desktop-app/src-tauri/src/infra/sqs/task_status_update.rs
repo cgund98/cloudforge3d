@@ -2,9 +2,12 @@ use base64::prelude::*;
 use core::time;
 use prost::Message;
 use std::io::Cursor;
+use std::sync::Arc;
 use std::{str, thread};
+use tauri::AppHandle;
 
 use crate::biz::render_task::controller::Controller;
+use crate::interface::events::emit_task_status_update_event;
 use crate::{errors::AppError, spec::proto::v1};
 
 use super::client_manager::SqsClientManager;
@@ -17,11 +20,15 @@ const QUEUE_NAME: &str = "cf3d-task-updates.fifo";
 
 pub struct TaskStatusUpdateConsumer {
     queue_url: Option<String>,
+    handle: Arc<AppHandle>,
 }
 
 impl TaskStatusUpdateConsumer {
-    pub fn new() -> TaskStatusUpdateConsumer {
-        TaskStatusUpdateConsumer { queue_url: None }
+    pub fn new(handle: Arc<AppHandle>) -> TaskStatusUpdateConsumer {
+        TaskStatusUpdateConsumer {
+            queue_url: None,
+            handle,
+        }
     }
 
     pub async fn listen_for_task_status_updates(
@@ -72,7 +79,12 @@ impl TaskStatusUpdateConsumer {
                 .queue_name(QUEUE_NAME)
                 .send()
                 .await
-                .map_err(|e| AppError::SQSError(format!("could not fetch queue url: {e}")))?;
+                .map_err(|e| {
+                    if let Some(err) = e.as_service_error() {
+                        return AppError::SQSError(format!("could not fetch queue url: {err}"));
+                    }
+                    AppError::SQSError(format!("could not fetch queue url: {e}"))
+                })?;
 
             self.queue_url = url_result.queue_url;
 
@@ -91,7 +103,12 @@ impl TaskStatusUpdateConsumer {
             .queue_url(queue_url)
             .send()
             .await
-            .map_err(|e| AppError::SQSError(format!("could not fetch messages: {e}")))?;
+            .map_err(|e| {
+                if let Some(err) = e.as_service_error() {
+                    return AppError::SQSError(format!("could not fetch messages: {err}"));
+                }
+                AppError::SQSError(format!("could not fetch messages: {e}"))
+            })?;
 
         let mut handled_count = 0;
         for message in msgs_response.messages.unwrap_or_default() {
@@ -102,7 +119,7 @@ impl TaskStatusUpdateConsumer {
             let task_id = body_parsed.task_id.clone();
             log::info!("Handling status update for task (id={task_id})");
 
-            controller.handle_status_update(body_parsed)?;
+            controller.handle_status_update(body_parsed.clone())?;
 
             client
                 .delete_message()
@@ -111,6 +128,8 @@ impl TaskStatusUpdateConsumer {
                 .send()
                 .await
                 .map_err(|e| AppError::SQSError(format!("could not delete message: {e}")))?;
+
+            emit_task_status_update_event(&self.handle, &body_parsed)?;
 
             handled_count += 1;
         }

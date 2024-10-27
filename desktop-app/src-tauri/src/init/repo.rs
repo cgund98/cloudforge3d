@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Manager};
 
-use crate::infra::{
-    db::{self, pool::PoolType},
-    settings,
-};
+use crate::infra::settings;
 
 // Helper struct used to hold all initialized repos
 pub struct Repos {
