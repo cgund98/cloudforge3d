@@ -27,6 +27,7 @@ class CloudDeployStack(Stack):
             queue_name="cf3d-task-updates.fifo",
             fifo=True,
             visibility_timeout=Duration.seconds(30),
+            retention_period=Duration.days(14)
         )
 
         vpc = ec2.Vpc(
