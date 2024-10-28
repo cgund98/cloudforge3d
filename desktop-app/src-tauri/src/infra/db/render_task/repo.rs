@@ -4,10 +4,7 @@ use rusqlite::{params, OptionalExtension};
 
 use crate::{
     errors::AppError,
-    infra::db::{
-        pool::{ConnType, PoolType},
-        render_job::entity::JobStatus,
-    },
+    infra::db::pool::ConnType,
 };
 
 use super::entity::{RenderTask, TaskStatus};

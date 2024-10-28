@@ -4,7 +4,7 @@ use prost::Message;
 use std::io::Cursor;
 use std::sync::Arc;
 use std::{str, thread};
-use tauri::{App, AppHandle};
+use tauri::AppHandle;
 
 use crate::biz::render_task::controller::Controller;
 use crate::errors::AppError;
