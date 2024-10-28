@@ -2,10 +2,7 @@ use std::str::FromStr;
 
 use rusqlite::{params, OptionalExtension};
 
-use crate::{
-    errors::AppError,
-    infra::db::pool::ConnType,
-};
+use crate::{errors::AppError, infra::db::pool::ConnType};
 
 use super::entity::{RenderTask, TaskStatus};
 

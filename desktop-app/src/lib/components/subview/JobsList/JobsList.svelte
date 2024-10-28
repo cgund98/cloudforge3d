@@ -4,7 +4,7 @@
   import { createJob } from "$lib/data/jobs/commands/createJob";
   import type { ListJobsItem } from "$lib/data/jobs/commands/listJobs";
   import { listJobs } from "$lib/data/jobs/commands/listJobs";
-  import { EventName } from "$lib/data/jobs/events";
+  import { EventName, type JobStatusUpdateEvent } from "$lib/data/jobs/events";
   import { listen } from "@tauri-apps/api/event";
   import { onDestroy } from "svelte";
 
@@ -33,7 +33,11 @@
     fetch();
     const unlisten = await listen<string>(
       EventName.JOB_STATUS_UPDATE,
-      () => fetch()
+      (e) => {
+        const event = JSON.parse(e.payload) as JobStatusUpdateEvent;
+        const found = jobs.find(j => j.id === event.jobId)
+        if (found !== undefined) fetch()
+      }
     );
     unMountFn = unlisten;
   };

@@ -39,7 +39,8 @@
   };
 
   selectedJobId.subscribe((jobId) => {
-    const delay = job?.id === undefined ? 0 : 300;
+    console.log("Selected job ID changed:", jobId)
+    const delay = job?.id ? 300 : 0;
     if (jobId !== job?.id) job = null;
 
     // Leave time for transition to occur
@@ -113,9 +114,7 @@
     <!-- Sections -->
 
     <div class="flex flex-col space-y-4">
-      {#if job.hasPreview}
         <PreviewSection {job} />
-      {/if}
 
       {#if job.status !== JobStatus.Uploading && job.status !== JobStatus.UploadFailed}
         <RenderProgressSection {job} {tasks} />
