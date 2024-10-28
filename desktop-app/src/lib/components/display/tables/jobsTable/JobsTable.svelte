@@ -6,6 +6,7 @@
   import { getContext } from "svelte";
   import type { Writable } from "svelte/store";
   import { ContextKeys } from "$lib/state";
+  import { flip } from "svelte/animate";
 
   const selectedJobId = getContext(ContextKeys.SELECTED_JOB_ID) as Writable<string>;
 
@@ -51,7 +52,7 @@
     <!-- body -->
     <tbody>
       {#each rows as row (row.id)}
-        <tr>
+        <tr animate:flip>
           <td>{row.name}</td>
           <td class="text-right"><div class="capitalize badge badge-outline badge-{mapJobStatusToColor(row.status)}">{row.status}</div></td>
           <td class="text-right">{formatDate(row.createdAt)}</td>

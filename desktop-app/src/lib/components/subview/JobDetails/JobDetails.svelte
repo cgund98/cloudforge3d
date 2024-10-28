@@ -16,6 +16,7 @@
   import { listTasks } from "$lib/data/tasks/commands/listTasks";
   import type { Task } from "$lib/data/tasks/task";
   import { mapJobStatusToColor } from "$lib/data/jobs/transforms";
+  import { slide } from "svelte/transition";
 
   let job: Job | null = null;
   let tasks: Task[] = [];
@@ -25,30 +26,35 @@
   ) as Writable<string>;
 
   const fetch = (jobId: string) => {
-    getJob({ jobId }).then((res) => {
-      if (res === null || res === undefined) {
-        job = null;
-        return;
-      }
+    getJob({ jobId })
+      .then((res) => {
+        if (res === null || res === undefined) return;
+        job = res;
+      })
+      .catch(console.error);
 
-      job = res;
-    }).catch(console.error);
+    listTasks({ jobId })
+      .then((res) => (tasks = res))
+      .catch(console.error);
+  };
 
-    listTasks({jobId}).then((res) => tasks = res).catch(console.error);
-  }
+  selectedJobId.subscribe((jobId) => {
+    const delay = job?.id === undefined ? 0 : 300;
+    if (jobId !== job?.id) job = null;
 
-  selectedJobId.subscribe((jobId) => fetch(jobId));
+    // Leave time for transition to occur
+    setTimeout(() => {
+      fetch(jobId);
+    }, delay);
+  });
 
   // Start listening for status events
   let unMountFn = () => {};
   const init = async () => {
-    const unlisten = await listen<string>(
-      EventName.JOB_STATUS_UPDATE,
-      (e) => {
-        const event = JSON.parse(e.payload) as JobStatusUpdateEvent;
-        if (job?.id !== null && event.jobId === job?.id) fetch(job.id);
-      }
-    );
+    const unlisten = await listen<string>(EventName.JOB_STATUS_UPDATE, (e) => {
+      const event = JSON.parse(e.payload) as JobStatusUpdateEvent;
+      if (job?.id !== undefined && event.jobId === job?.id) fetch(job.id);
+    });
     unMountFn = unlisten;
   };
 
@@ -60,7 +66,10 @@
 </script>
 
 {#if job !== null}
-  <div class="px-4 pt-8 flex flex-col flex-1 border-l-[1px] border-base-200">
+  <div
+    class="px-4 pt-8 flex flex-col flex-1 border-l-[1px] border-base-200"
+    transition:slide
+  >
     <!-- Header -->
     <div class="mb-2 flex justify-between items-center">
       <div class="flex items-center space-x-2">
@@ -83,11 +92,11 @@
           </div>
         {/if}
         {#if job.status === JobStatus.Failed}
-        <div class="tooltip tooltip-bottom" data-tip="Retry Failed Tasks">
-          <button class="btn btn-ghost btn-sm btn-square">
-            <RefreshIcon />
-          </button>
-        </div>
+          <div class="tooltip tooltip-bottom" data-tip="Retry Failed Tasks">
+            <button class="btn btn-ghost btn-sm btn-square">
+              <RefreshIcon />
+            </button>
+          </div>
         {/if}
 
         <div class="tooltip tooltip-bottom" data-tip="Close">
@@ -104,10 +113,12 @@
     <!-- Sections -->
 
     <div class="flex flex-col space-y-4">
-      <PreviewSection />
+      {#if job.hasPreview}
+        <PreviewSection {job} />
+      {/if}
 
       {#if job.status !== JobStatus.Uploading && job.status !== JobStatus.UploadFailed}
-      <RenderProgressSection {job} tasks={tasks} />
+        <RenderProgressSection {job} {tasks} />
       {/if}
 
       <PropertiesSection {job} />

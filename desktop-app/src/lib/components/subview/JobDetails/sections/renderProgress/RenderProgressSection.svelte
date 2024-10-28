@@ -87,7 +87,7 @@
   >
     <div class="flex flex-wrap space-x-2 space-y-2 px-2 mt-2">
       <div></div>
-      {#each tasks as task}
+      {#each tasks as task (task.id)}
         <TaskBlock {task} />
       {/each}
     </div>

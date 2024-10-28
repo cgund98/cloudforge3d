@@ -6,7 +6,7 @@
   import { setContext } from "svelte";
   import { writable } from "svelte/store";
 
-  const theme = "halloween";
+  const theme = "dark";
 
   // Context
   let alerts = writable([]);

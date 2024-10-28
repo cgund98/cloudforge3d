@@ -60,7 +60,7 @@ pub async fn generate_job_thumbnail_gif(
 
     // Create a GIF encoder with repeat set to infinity (loops indefinitely)
     let mut encoder = Encoder::new(&mut image_file, width as u16, height as u16, &[])?;
-    encoder.set_repeat(Repeat::Finite(1))?;
+    encoder.set_repeat(Repeat::Infinite)?;
 
     // Load each image, resize if needed, and add it to the GIF
     for (_frame_number, path) in frame_paths {
