@@ -23,6 +23,7 @@ async fn main() {
             cloudforge3d_lib::interface::greet::greet,
             cmd::settings::update_aws_credentials,
             cmd::settings::get_aws_credentials,
+            cmd::settings::check_deployment_health,
             cmd::render_job::create_job,
             cmd::render_job::get_job,
             cmd::render_job::list_jobs,

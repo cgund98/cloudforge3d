@@ -19,6 +19,9 @@ pub enum AppError {
     #[error("500 <|> Unable to get connection pool: {0}")]
     R2d2SqliteError(#[from] r2d2::Error),
 
+    #[error("500 <|> Unable to check status of deployment: {0}")]
+    S3HealthError(String),
+
     #[error("500 <|> Unable to complete upload to S3: {0}")]
     S3UploadError(String),
 

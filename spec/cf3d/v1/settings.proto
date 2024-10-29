@@ -2,15 +2,6 @@ syntax = "proto3";
 
 package cf3d.v1;
 
-/** Enums **/
-
-enum QueueHealthDescription {
-  QUEUE_HEALTH_DESCRIPTION_UNSPECIFIED = 0;
-  QUEUE_HEALTH_DESCRIPTION_READY = 1;
-  QUEUE_HEALTH_DESCRIPTION_INVALID_CREDENTIALS = 2;
-  QUEUE_HEALTH_DESCRIPTION_QUEUE_NONEXISTENT = 3;
-}
-
 /** Commands **/
 
 message UpdateAwsCredentialsCommand {
@@ -27,6 +18,6 @@ message GetAwsCredentialsResponse {
   string region = 3;
 }
 
-message GetQueueHealthResponse {
-  QueueHealthDescription description = 1;
+message CheckDeploymentHealthResponse {
+  string status = 1;
 }

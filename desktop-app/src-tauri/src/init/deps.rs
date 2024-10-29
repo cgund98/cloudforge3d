@@ -46,7 +46,7 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
         async_handle.clone(),
         thumbnail_queue.clone(),
     ));
-    let settings_ctrl = biz::settings::Controller::new(repos.settings_repo.clone());
+    let settings_ctrl = biz::settings::Controller::new(repos.settings_repo.clone(), s3_client_manager.clone());
 
     // Initialize state
     let state = crate::state::AppState {

@@ -3,6 +3,13 @@ import { invoke } from "@tauri-apps/api/core";
 enum Commands {
   GET_AWS_CREDENTIALS = "get_aws_credentials",
   UPDATE_AWS_CREDENTIALS = "update_aws_credentials",
+  CHECK_DEPLOYMENT_HEALTH = "check_deployment_health",
+}
+
+export enum DeploymentStatus {
+  READY = "ready",
+  UNREACHABLE = "unreachable",
+  UNKNOWN = "unknown",
 }
 
 /** Requests */
@@ -15,10 +22,14 @@ interface UpdateAwsCredentialsRequest {
 
 /** Responses */
 
-interface GetAwsCredentialsResponse {
+export interface GetAwsCredentialsResponse {
   accessKeyId?: string;
   secretAccessKey?: string;
   region?: string;
+}
+
+export interface CheckDeploymentHealthResponse {
+  status: DeploymentStatus;
 }
 
 /** Commands */
@@ -30,7 +41,7 @@ export const getAwsCredentials = async () => {
 };
 
 export const updateAwsCredentials = async (
-  args: UpdateAwsCredentialsRequest,
+  args: UpdateAwsCredentialsRequest
 ) => {
   const { accessKeyId = null, secretAccessKey = null, region = null } = args;
 
@@ -43,4 +54,12 @@ export const updateAwsCredentials = async (
   };
 
   await invoke(Commands.UPDATE_AWS_CREDENTIALS, invokeArgs);
+};
+
+export const checkDeploymentHealth = async () => {
+  const result: CheckDeploymentHealthResponse = await invoke(
+    Commands.CHECK_DEPLOYMENT_HEALTH
+  );
+
+  return result;
 };

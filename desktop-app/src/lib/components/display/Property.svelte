@@ -1,6 +1,7 @@
 <script lang="ts">
   export let label: string;
   export let value: string;
+  export let tooltip: string | undefined = undefined;
 </script>
 
 <div
@@ -11,7 +12,7 @@
     <p class="truncate max-w-[120px]">{label}</p>
   </div>
 
-  <div class="tooltip" data-tip={value}>
+  <div class="tooltip" data-tip={tooltip ?? value}>
     <p class="font-semibold truncate max-w-[80px]">{value}</p>
   </div>
 </div>

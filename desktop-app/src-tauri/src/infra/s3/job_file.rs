@@ -10,8 +10,8 @@ use aws_sdk_s3::{
 };
 
 use crate::{errors::AppError, infra::file::parse_file_size_bytes};
+use super::constants::BUCKET_NAME;
 
-const BUCKET_NAME: &str = "cf3d-blob-store";
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 const MAX_CHUNKS: u64 = 5000;
 
