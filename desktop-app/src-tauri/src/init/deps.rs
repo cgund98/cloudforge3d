@@ -69,7 +69,6 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
     // Spawn a separate thread for the task update consumer
     let sqs_client_manager = SqsClientManager::new(repos.settings_repo.clone());
     let mut updates_consumer = task_status_update::TaskStatusUpdateConsumer::new(
-        async_handle.clone(),
         s3_client_manager.clone(),
     );
 

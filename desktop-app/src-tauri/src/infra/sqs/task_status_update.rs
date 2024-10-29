@@ -4,7 +4,6 @@ use prost::Message;
 use std::io::Cursor;
 use std::sync::Arc;
 use std::{str, thread};
-use tauri::AppHandle;
 
 use crate::biz::render_task::controller::Controller;
 use crate::errors::AppError;
@@ -21,18 +20,15 @@ const QUEUE_NAME: &str = "cf3d-task-updates.fifo";
 
 pub struct TaskStatusUpdateConsumer {
     queue_url: Option<String>,
-    handle: Arc<AppHandle>,
     s3_manager: Arc<S3ClientManager>,
 }
 
 impl TaskStatusUpdateConsumer {
     pub fn new(
-        handle: Arc<AppHandle>,
         s3_manager: Arc<S3ClientManager>,
     ) -> TaskStatusUpdateConsumer {
         TaskStatusUpdateConsumer {
             queue_url: None,
-            handle,
             s3_manager,
         }
     }

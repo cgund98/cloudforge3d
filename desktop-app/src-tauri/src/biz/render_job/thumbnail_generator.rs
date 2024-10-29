@@ -2,7 +2,7 @@ use core::time;
 use scc::HashSet;
 use std::{sync::Arc, thread};
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 use crate::{
     biz::thumbnail::{generate_job_thumbnail_gif, get_job_thumbnails_path},

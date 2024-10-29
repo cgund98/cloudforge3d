@@ -1,14 +1,9 @@
-use std::{
-    hash::{DefaultHasher, Hash, Hasher},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use aws_config::Region;
 use aws_sdk_s3::{config::Credentials, Client};
 
 use crate::{errors::AppError, infra::settings::SettingsRepo};
-
-const CLIENT_IDX: i8 = 0;
 
 pub type CachedClient = Client;
 
@@ -16,12 +11,6 @@ pub type CachedClient = Client;
 // create a new one.
 pub struct S3ClientManager {
     settings_repo: Arc<SettingsRepo>,
-}
-
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
 }
 
 impl S3ClientManager {

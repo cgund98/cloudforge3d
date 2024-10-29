@@ -125,7 +125,6 @@ impl FileUploadProcessor {
             log::info!("Job (job_id={job_id}) does not exist. Skipping upload.");
             return Ok(());
         }
-        let mut job = job_query.unwrap();
 
         // Fetch s3 client
         let s3_client = self.s3_manager.get_client().await?;
@@ -167,7 +166,7 @@ impl FileUploadProcessor {
             delete_job_files(&s3_client, &job_id).await?;
             return Ok(());
         }
-        job = job_query.unwrap();
+        let mut job = job_query.unwrap();
 
         // Update job status
         job.status = JobStatus::Pending;
