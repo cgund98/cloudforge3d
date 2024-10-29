@@ -1,7 +1,7 @@
 use std::fs;
 use std::sync::Arc;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use tauri::AppHandle;
 
@@ -15,8 +15,9 @@ use crate::infra::db::render_job;
 use crate::infra::db::render_job::entity::{JobStatus, RenderJob};
 use crate::infra::file::parse_file_size_bytes;
 use crate::infra::s3::client_manager::S3ClientManager;
-use crate::infra::s3::job_file::delete_job_files;
-use crate::spec::proto::v1::{self, ListJobsResponseItem};
+use crate::infra::s3::job_file::{delete_job_files, download_frames};
+use crate::interface::events::emit_job_status_update_event;
+use crate::spec::proto::v1::{self, DownloadJobOutputsRequest, ListJobsResponseItem};
 use crate::spec::timestamp::to_pb_timestamp;
 
 pub struct Controller {
@@ -129,6 +130,31 @@ impl Controller {
         })
     }
 
+    // Update fields for a job
+    pub fn update_job(&self, req: v1::UpdateJobRequest) -> Result<(), AppError> {
+        let job_id = req.job_id;
+
+        // Fetch job
+        let job_opt = with_conn(&self.pool, |conn| {
+            render_job::repo::get_by_id(conn, &job_id)
+        })?;
+        if job_opt.is_none() {
+            return Err(AppError::BadRequest("Job not found.".to_string()));
+        }
+        let mut job = job_opt.unwrap();
+
+        // Update fields
+        if let Some(download_path) = req.download_path {
+            job.download_path = download_path;
+        }
+
+        // Persist changes
+        with_transaction(&self.pool, |tx| render_job::repo::save(tx, &job))?;
+        emit_job_status_update_event(&self.handle, &job_id)?;
+
+        Ok(())
+    }
+
     pub fn get_job(&self, req: v1::GetJobRequest) -> Result<v1::GetJobResponse, AppError> {
         let job_id = req.job_id;
 
@@ -189,6 +215,7 @@ impl Controller {
         found_job.status = render_job::entity::JobStatus::Canceling;
         self.cancel_queue.enqueue(job_id.clone());
         with_transaction(&self.pool, |tx| render_job::repo::save(tx, &found_job))?;
+        emit_job_status_update_event(&self.handle, &job_id)?;
         log::info!("Scheduled cancellation for job (job_id={job_id}).");
 
         Ok(())
@@ -233,7 +260,32 @@ impl Controller {
 
         // Delete job
         with_transaction(&self.pool, |tx| render_job::repo::delete(tx, &job_id))?;
+        emit_job_status_update_event(&self.handle, &job_id)?;
 
         Ok(())
+    }
+
+    pub async fn download_frames(&self, req: v1::DownloadJobOutputsRequest) -> Result<v1::DownloadJobOutputsResponse, AppError> {
+        let job_id = req.job_id;
+
+        // Fetch job
+        let job_opt = with_conn(&self.pool, |conn| {
+            render_job::repo::get_by_id(conn, &job_id)
+        })?;
+        if job_opt.is_none() {
+            return Err(AppError::BadRequest("Job not found.".to_string()));
+        }
+        let job = job_opt.unwrap();
+
+        let s3_client = self.s3_manager.get_client().await?;
+        let exports_path = Path::new(&job.download_path).to_path_buf();
+        let downloaded_count = download_frames(&s3_client, &job_id, exports_path).await?;
+
+        // Format response
+        let response = v1::DownloadJobOutputsResponse {
+            downloaded_count: downloaded_count as u32,
+        };
+
+        Ok(response)
     }
 }

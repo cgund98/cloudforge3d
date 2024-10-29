@@ -109,6 +109,8 @@ class CloudDeployStack(Stack):
             self,
             "MyJobDefinition",
             job_definition_name="cf3d-cpu-job-definition",
+            timeout=Duration.hours(12),
+            propagate_tags=True,
             container=batch.EcsEc2ContainerDefinition(
                 self,
                 "CpuRenderContainerDef",

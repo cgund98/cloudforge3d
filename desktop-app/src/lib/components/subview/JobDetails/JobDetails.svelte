@@ -142,7 +142,7 @@
 
       <PropertiesSection {job} />
 
-      <ExportsSection />
+      <ExportsSection {job} />
     </div>
   </div>
 {/if}

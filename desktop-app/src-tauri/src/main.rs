@@ -26,8 +26,10 @@ async fn main() {
             cmd::render_job::create_job,
             cmd::render_job::get_job,
             cmd::render_job::list_jobs,
+            cmd::render_job::update_job,
             cmd::render_job::cancel_job,
             cmd::render_job::delete_job,
+            cmd::render_job::download_frames,
             cmd::render_task::list_tasks,
         ])
         .run(tauri::generate_context!())

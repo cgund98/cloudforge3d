@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::path::Path;
 use std::{fs, path::PathBuf};
 
 use aws_sdk_s3::types::{Delete, ObjectIdentifier};
@@ -22,13 +23,20 @@ pub struct Progress {
     pub total: u64,
 }
 
+// Construct the prefix path of a job
+fn generate_job_path(job_id: &str) -> String {
+    format!("jobs/{job_id}")
+}
+
 // Construct the path for a job input file
 fn generate_input_path(job_id: &str, key: &str) -> String {
-    format!("jobs/{job_id}/inputs/{key}")
+    let job_path = generate_job_path(job_id);
+    format!("{job_path}/inputs/{key}")
 }
 
 fn generate_output_path(job_id: &str, key: &str) -> String {
-    format!("jobs/{job_id}/outputs/{key}")
+    let job_path = generate_job_path(job_id);
+    format!("{job_path}/outputs/{key}")
 }
 
 // Read file metadata and determine number of chunks
@@ -160,8 +168,8 @@ pub async fn upload_job_file(
 // Download a job output file from S3
 pub async fn download_job_file(
     client: &aws_sdk_s3::Client,
-    job_id: String,
-    source_key: String,
+    job_id: &str,
+    source_key: &str,
     output_path: PathBuf,
 ) -> Result<usize, AppError> {
     let source_path = generate_output_path(&job_id, &source_key);
@@ -214,7 +222,7 @@ pub async fn download_job_file(
 
 // Delete all files belonging to a specific job
 pub async fn delete_job_files(client: &aws_sdk_s3::Client, job_id: &str) -> Result<(), AppError> {
-    let job_path = format!("jobs/{job_id}/");
+    let job_path = generate_job_path(job_id);
 
     log::info!("Searching for objects to delete...");
     let objects = client
@@ -225,7 +233,6 @@ pub async fn delete_job_files(client: &aws_sdk_s3::Client, job_id: &str) -> Resu
         .send()
         .try_collect()
         .await
-        .inspect(|_| log::info!("Got paginated response."))
         .map_err(|e| {
             if let Some(err) = e.as_service_error() {
                 return AppError::S3DeleteError(format!("{err}"));
@@ -235,8 +242,6 @@ pub async fn delete_job_files(client: &aws_sdk_s3::Client, job_id: &str) -> Resu
         .into_iter()
         .flat_map(|o| o.contents.unwrap_or_default())
         .collect::<Vec<_>>();
-
-    log::info!("Fetch objects.");
 
     let delete_objects: Vec<ObjectIdentifier> = objects
         .into_iter()
@@ -264,4 +269,46 @@ pub async fn delete_job_files(client: &aws_sdk_s3::Client, job_id: &str) -> Resu
         .map_err(|e| AppError::S3DeleteError(format!("{e}")))?;
 
     Ok(())
+}
+
+pub async fn download_frames(client: &aws_sdk_s3::Client, job_id: &str, exports_path: PathBuf) -> Result<usize, AppError> {
+    let outputs_path = generate_output_path(job_id, "");
+
+    log::info!("Searching for objects to delete...");
+    let objects = client
+        .list_objects_v2()
+        .bucket(BUCKET_NAME)
+        .prefix(&outputs_path)
+        .into_paginator()
+        .send()
+        .try_collect()
+        .await
+        .map_err(|e| {
+            if let Some(err) = e.as_service_error() {
+                return AppError::S3DownloadError(format!("{err}"));
+            }
+            AppError::S3DownloadError(format!("{e}"))
+        })?
+        .into_iter()
+        .flat_map(|o| o.contents.unwrap_or_default())
+        .collect::<Vec<_>>();
+
+    let download_subpaths: Vec<String> = objects
+        .into_iter()
+        .flat_map(|obj| {
+           obj.key
+        })
+        .filter(|e| e.ends_with(".exr"))
+        .collect::<Vec<_>>();
+
+    let downloaded_count = download_subpaths.len();
+    log::info!("Will download {downloaded_count} objects.");
+
+    for source_key in download_subpaths {
+        let filename = Path::new(&source_key).file_name().unwrap_or_default().to_str().unwrap_or_default();
+        let output_path = exports_path.join(filename);
+        download_job_file(client, job_id, filename, output_path).await?;
+    }
+
+    Ok(downloaded_count)
 }

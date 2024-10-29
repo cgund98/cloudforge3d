@@ -39,6 +39,14 @@ message DeleteJobRequest {
   string job_id = 1;
 }
 
+message DownloadJobOutputsRequest {
+  string job_id = 1;
+}
+
+message DownloadJobOutputsResponse {
+  uint32 downloaded_count = 1;
+}
+
 /** Queries **/
 
 message ListJobsRequest {
