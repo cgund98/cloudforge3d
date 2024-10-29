@@ -16,7 +16,7 @@
 
   <div class="tooltip tooltip-left w-full max-w-[200px]" data-tip={value}>
     <input
-      on:click={async () => {
+      onclick={async () => {
         const newPath = await open({
           directory: true,
           multiple: false,

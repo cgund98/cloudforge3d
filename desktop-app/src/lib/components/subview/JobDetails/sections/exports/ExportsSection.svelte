@@ -6,11 +6,11 @@
   let checked = false;
 </script>
 
-<div class="flex flex-col border-base-300 bg-base-200 border px-4 py-1 pt-4 rounded-2xl space-y-3 overflow-hidden">
+<div class="flex flex-col border-base-300 bg-base-200 border px-4 py-1 pt-4 rounded-2xl space-y-3 overflow-visible">
   <div class="">
     <div class="flex justify-between flex-row">
       <p class="text-md font-medium">Downloads</p>
-      <button class="btn btn-primary btn-sm" on:click={(event) => {
+      <button class="btn btn-primary btn-sm" onclick={(event) => {
         event.preventDefault()
         checked = false;
       }}>Download Frames</button>

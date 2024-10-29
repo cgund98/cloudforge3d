@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { mapStatusToColor } from "$lib/data/jobs/transforms";
-  import type { Task } from "$lib/data/tasks/task";
+  import { formatDuration } from "$lib/data/date";
+  import { mapTaskStatusToColor } from "$lib/data/jobs/transforms";
+  import { TaskStatus, type Task } from "$lib/data/tasks/task";
 
   export let task: Task;
+
 
   const determineTaskTimes = (task: Task) => {
     if (task.completedAt !== undefined && task.startedAt !== undefined)
@@ -21,28 +23,27 @@
 
     return {
       label: "Queue Time",
-      value: formatDuration(Date.now() - task.queuedAt.getTime()),
+      value: task.queuedAt
+        ? formatDuration(Date.now() - task.queuedAt.getTime())
+        : "??",
     };
   };
 
-  const formatDuration = (duration: number) => {
-    const seconds = Math.floor((duration / 1000) % 60);
-    const minutes = Math.floor((duration / (1000 * 60)) % 60);
-    const hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+  let time: {label: string, value: string} | undefined = undefined;
 
-    const paddedHours = hours < 10 ? "0" + hours : hours;
-    const paddedMinutes = minutes < 10 ? "0" + minutes : minutes;
-    const paddedSeconds = seconds < 10 ? "0" + seconds : seconds;
-    return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`;
-  };
+  $: time = determineTaskTimes(task);
+  $: color = mapTaskStatusToColor(task.status)
 </script>
 
 <div class="dropdown dropdown-left">
   <div
     tabindex="-1"
-    class="h-4 w-4 bg-{mapStatusToColor(task.status)} rounded-sm cursor-pointer"
+    class="h-4 w-4 bg-{mapTaskStatusToColor(
+      task.status
+    )} rounded-sm cursor-pointer"
     role="button"
-  />
+    onclick={() => time = determineTaskTimes(task)}
+></div>
   <div
     tabindex="-1"
     class="dropdown-content menu bg-base-200 border-[1px] border-base-300 rounded-md z-[1] w-52 p-2 px-1 shadow"
@@ -52,27 +53,36 @@
       <p>{task.frameNumber}</p>
     </div>
 
-    <div class="divider py-0 my-0" />
+    <div class="divider py-0 my-0"></div>
 
     <div class="flex justify-between px-2">
       <p class="font-medium">Status</p>
-      <p class="text-info text-{mapStatusToColor(task.status)} capitalize">
+      <p class="text-{color} capitalize">
         {task.status}
       </p>
     </div>
 
-    <div class="divider py-0 my-0" />
+    <div class="divider py-0 my-0"></div>
 
     <div class="flex justify-between px-2">
-      <p class="font-medium">{determineTaskTimes(task).label}</p>
-      <p>{determineTaskTimes(task).value}</p>
+      <p class="font-medium">{time?.label}</p>
+      <p>{time?.value}</p>
     </div>
 
-    <div class="divider py-0 my-0" />
+    <div class="divider py-0 my-0"></div>
 
     <div class="flex justify-between">
-      <button class="btn btn-ghost btn-xs">View Logs</button>
-      <button class="text-secondary btn btn-ghost btn-xs">Retry</button>
+      {#if task.status === TaskStatus.Failed || task.status === TaskStatus.Succeeded}
+        <button class="btn btn-ghost btn-xs">View Logs</button>
+      {:else}
+        <div></div>
+      {/if}
+
+      {#if task.status === TaskStatus.Failed}
+        <button class="text-secondary btn btn-ghost btn-xs">Retry</button>
+      {:else}
+        <div></div>
+      {/if}
     </div>
   </div>
 </div>

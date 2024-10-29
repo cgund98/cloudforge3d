@@ -1,6 +1,35 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-fn main() {
-    cloudforge3d_lib::run()
+use cloudforge3d_lib::interface::cmd;
+
+#[tokio::main]
+async fn main() {
+    tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("logs".to_string()),
+                    },
+                ))
+                .build(),
+        )
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
+        .setup(|app| cloudforge3d_lib::init::deps::init_deps(app))
+        .invoke_handler(tauri::generate_handler![
+            cloudforge3d_lib::interface::greet::greet,
+            cmd::settings::update_aws_credentials,
+            cmd::settings::get_aws_credentials,
+            cmd::render_job::create_job,
+            cmd::render_job::get_job,
+            cmd::render_job::list_jobs,
+            cmd::render_job::cancel_job,
+            cmd::render_job::delete_job,
+            cmd::render_task::list_tasks,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }

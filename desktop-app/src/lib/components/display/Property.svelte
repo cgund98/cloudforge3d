@@ -8,7 +8,7 @@
 >
   <div class="flex space-x-3">
     <slot />
-    <p class="truncate max-w-[100px]">{label}</p>
+    <p class="truncate max-w-[120px]">{label}</p>
   </div>
 
   <div class="tooltip" data-tip={value}>

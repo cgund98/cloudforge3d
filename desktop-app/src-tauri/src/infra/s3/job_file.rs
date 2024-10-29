@@ -1,0 +1,267 @@
+use std::io::Write;
+use std::{fs, path::PathBuf};
+
+use aws_sdk_s3::types::{Delete, ObjectIdentifier};
+use aws_sdk_s3::{
+    operation::create_multipart_upload::CreateMultipartUploadOutput,
+    primitives::{ByteStream, Length},
+    types::{CompletedMultipartUpload, CompletedPart},
+};
+
+use crate::{errors::AppError, infra::file::parse_file_size_bytes};
+
+const BUCKET_NAME: &str = "cf3d-blob-store";
+const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
+const MAX_CHUNKS: u64 = 5000;
+
+// Progress Struct
+pub struct Progress {
+    pub job_id: String,
+    pub file_name: String,
+    pub uploaded: u64,
+    pub total: u64,
+}
+
+// Construct the path for a job input file
+fn generate_input_path(job_id: &str, key: &str) -> String {
+    format!("jobs/{job_id}/inputs/{key}")
+}
+
+fn generate_output_path(job_id: &str, key: &str) -> String {
+    format!("jobs/{job_id}/outputs/{key}")
+}
+
+// Read file metadata and determine number of chunks
+async fn parse_chunks_count(path: PathBuf) -> Result<(u64, u64), AppError> {
+    let file_size = parse_file_size_bytes(path).await?;
+
+    // Calculate chunk count
+    let mut chunk_count = (file_size / CHUNK_SIZE) + 1;
+    let mut size_of_last_chunk = file_size % CHUNK_SIZE;
+    if size_of_last_chunk == 0 {
+        size_of_last_chunk = CHUNK_SIZE;
+        chunk_count -= 1;
+    }
+
+    // Validate chunk count
+    if file_size == 0 {
+        return Err(AppError::FileReadError("File is empty.".to_string()));
+    }
+    if chunk_count > MAX_CHUNKS {
+        return Err(AppError::FileReadError("File is too large.".to_string()));
+    }
+
+    Ok((chunk_count, size_of_last_chunk))
+}
+
+// Upload a large file to the job S3 bucket.
+pub async fn upload_job_file(
+    client: &aws_sdk_s3::Client,
+    job_id: &str,
+    source_path: PathBuf,
+    target_key: &str,
+    progress_callback: impl Fn(Progress) -> Result<(), AppError>,
+) -> Result<(), AppError> {
+    // Generate object path
+    let upload_path = generate_input_path(job_id, target_key);
+
+    let file_name = source_path
+        .file_name()
+        .map(|n| n.to_str())
+        .unwrap_or(Some(""))
+        .unwrap_or("unknown");
+
+    // Initialize upload
+    let multipart_upload_res: CreateMultipartUploadOutput = client
+        .create_multipart_upload()
+        .bucket(BUCKET_NAME)
+        .key(&upload_path)
+        .send()
+        .await
+        .map_err(|e| AppError::S3UploadError(format!("{e}")))?;
+
+    let upload_id = multipart_upload_res
+        .upload_id()
+        .ok_or(AppError::S3UploadError(
+            "Missing upload_id after CreateMultipartUpload".to_string(),
+        ))?;
+
+    // Parse metadata
+    let chunks_info = parse_chunks_count(source_path.clone()).await?;
+    let chunk_count = chunks_info.0;
+    let size_of_last_chunk = chunks_info.1;
+
+    // Upload parts
+    let mut upload_parts: Vec<aws_sdk_s3::types::CompletedPart> = Vec::new();
+
+    for chunk_index in 0..chunk_count {
+        let this_chunk = if chunk_count - 1 == chunk_index {
+            size_of_last_chunk
+        } else {
+            CHUNK_SIZE
+        };
+
+        let stream = ByteStream::read_from()
+            .path(source_path.clone())
+            .offset(chunk_index * CHUNK_SIZE)
+            .length(Length::Exact(this_chunk))
+            .build()
+            .await
+            .unwrap();
+
+        // Chunk index needs to start at 0, but part numbers start at 1.
+        let part_number = (chunk_index as i32) + 1;
+        let upload_part_res = client
+            .upload_part()
+            .key(&upload_path)
+            .bucket(BUCKET_NAME)
+            .upload_id(upload_id)
+            .body(stream)
+            .part_number(part_number)
+            .send()
+            .await
+            .map_err(|e| AppError::S3UploadError(format!("{e}")))?;
+
+        upload_parts.push(
+            CompletedPart::builder()
+                .e_tag(upload_part_res.e_tag.unwrap_or_default())
+                .part_number(part_number)
+                .build(),
+        );
+
+        // Notify of upload progress
+        let _ = progress_callback(Progress {
+            job_id: job_id.to_string(),
+            file_name: file_name.to_string(),
+            uploaded: chunk_index + 1,
+            total: chunk_count,
+        })
+        .inspect_err(|e| log::warn!("Encountered error while notifying progress update: {e}"));
+    }
+
+    // Close upload
+    let completed_multipart_upload: CompletedMultipartUpload = CompletedMultipartUpload::builder()
+        .set_parts(Some(upload_parts))
+        .build();
+
+    let _complete_multipart_upload_res = client
+        .complete_multipart_upload()
+        .bucket(BUCKET_NAME)
+        .key(&upload_path)
+        .multipart_upload(completed_multipart_upload)
+        .upload_id(upload_id)
+        .send()
+        .await
+        .map_err(|e| AppError::S3UploadError(format!("{e}")))?;
+
+    Ok(())
+}
+
+// Download a job output file from S3
+pub async fn download_job_file(
+    client: &aws_sdk_s3::Client,
+    job_id: String,
+    source_key: String,
+    output_path: PathBuf,
+) -> Result<usize, AppError> {
+    let source_path = generate_output_path(&job_id, &source_key);
+
+    // Delete existing file if it exists
+    if output_path.exists() {
+        fs::remove_file(output_path.clone())
+            .inspect_err(|e| log::error!("Unable to remove existing file: {e}"))?;
+    }
+
+    // Create parent path if not exists
+    if let Some(parent_path) = output_path.parent() {
+        if !parent_path.exists() {
+            fs::create_dir_all(parent_path).inspect_err(|e| {
+                log::error!("Unable to create job file directory '{parent_path:?}': {e}")
+            })?;
+        }
+    }
+
+    log::info!("Downloading file from s3 ({source_path})...");
+
+    let mut file = fs::File::create(output_path)?;
+
+    let mut object = client
+        .get_object()
+        .bucket(BUCKET_NAME)
+        .key(&source_path)
+        .send()
+        .await
+        .map_err(|e| AppError::S3DownloadError(format!("{e}")))?;
+
+    let mut byte_count = 0_usize;
+    while let Some(bytes) = object.body.try_next().await.map_err(|err| {
+        AppError::S3DownloadError(format!("Failed to read from S3 download stream: {err:?}"))
+    })? {
+        let bytes_len = bytes.len();
+        file.write_all(&bytes).map_err(|err| {
+            AppError::S3DownloadError(format!(
+                "Failed to write from S3 download stream to local file: {err:?}"
+            ))
+        })?;
+        byte_count += bytes_len;
+    }
+
+    let kb_count = byte_count / 1024;
+    log::info!("Done downloading file of size ({kb_count} kB) from s3 ({source_path})...");
+
+    Ok(byte_count)
+}
+
+// Delete all files belonging to a specific job
+pub async fn delete_job_files(client: &aws_sdk_s3::Client, job_id: &str) -> Result<(), AppError> {
+    let job_path = format!("jobs/{job_id}/");
+
+    log::info!("Searching for objects to delete...");
+    let objects = client
+        .list_objects_v2()
+        .bucket(BUCKET_NAME)
+        .prefix(job_path)
+        .into_paginator()
+        .send()
+        .try_collect()
+        .await
+        .inspect(|_| log::info!("Got paginated response."))
+        .map_err(|e| {
+            if let Some(err) = e.as_service_error() {
+                return AppError::S3DeleteError(format!("{err}"));
+            }
+            AppError::S3DeleteError(format!("{e}"))
+        })?
+        .into_iter()
+        .flat_map(|o| o.contents.unwrap_or_default())
+        .collect::<Vec<_>>();
+
+    log::info!("Fetch objects.");
+
+    let delete_objects: Vec<ObjectIdentifier> = objects
+        .into_iter()
+        .flat_map(|obj| {
+            ObjectIdentifier::builder()
+                .key(obj.key.unwrap_or_default())
+                .build()
+        })
+        .collect::<Vec<_>>();
+
+    let obj_count = delete_objects.len();
+    log::info!("Will delete {obj_count} objects.");
+
+    let delete = Delete::builder()
+        .set_objects(Some(delete_objects))
+        .build()
+        .map_err(|e| AppError::S3DeleteError(format!("{e}")))?;
+
+    client
+        .delete_objects()
+        .bucket(BUCKET_NAME)
+        .delete(delete)
+        .send()
+        .await
+        .map_err(|e| AppError::S3DeleteError(format!("{e}")))?;
+
+    Ok(())
+}
