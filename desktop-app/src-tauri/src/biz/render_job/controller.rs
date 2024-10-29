@@ -1,16 +1,21 @@
+use std::fs;
 use std::sync::Arc;
 
 use std::path::Path;
 
+use tauri::AppHandle;
 
 use super::upload_processor::FileUploadProcessorInput;
 use super::validation;
+use crate::biz::thumbnail::get_job_thumbnails_path;
 use crate::errors::AppError;
 use crate::infra::db::decorator::{with_conn, with_transaction};
 use crate::infra::db::pool::PoolType;
 use crate::infra::db::render_job;
 use crate::infra::db::render_job::entity::{JobStatus, RenderJob};
 use crate::infra::file::parse_file_size_bytes;
+use crate::infra::s3::client_manager::S3ClientManager;
+use crate::infra::s3::job_file::delete_job_files;
 use crate::spec::proto::v1::{self, ListJobsResponseItem};
 use crate::spec::timestamp::to_pb_timestamp;
 
@@ -18,6 +23,8 @@ pub struct Controller {
     pool: Arc<PoolType>,
     file_upload_queue: Arc<super::upload_processor::FileUploadQueue>,
     cancel_queue: Arc<super::cancel_processor::CancelProcessorQueue>,
+    s3_manager: Arc<S3ClientManager>,
+    handle: Arc<AppHandle>,
 }
 
 impl Controller {
@@ -25,11 +32,15 @@ impl Controller {
         pool: Arc<PoolType>,
         file_upload_queue: Arc<super::upload_processor::FileUploadQueue>,
         cancel_queue: Arc<super::cancel_processor::CancelProcessorQueue>,
+        s3_manager: Arc<S3ClientManager>,
+        handle: Arc<AppHandle>,
     ) -> Controller {
         Controller {
             pool,
             file_upload_queue,
             cancel_queue,
+            s3_manager,
+            handle,
         }
     }
 
@@ -71,7 +82,7 @@ impl Controller {
             has_preview: false,
             frame_rendered_count: 0,
         };
-        with_transaction(&self.pool, |tx| render_job::repo::save(tx, &job))?;
+        with_transaction(&self.pool, |tx| render_job::repo::create(tx, &job))?;
 
         // Fetch persisted job
         let job = with_conn(&self.pool, |conn| {
@@ -157,7 +168,6 @@ impl Controller {
         let job = with_conn(&self.pool, |conn| {
             render_job::repo::get_by_id(conn, &job_id)
         })?;
-
         if job.is_none() {
             return Err(AppError::BadRequest("Job not found.".to_string()));
         }
@@ -180,6 +190,49 @@ impl Controller {
         self.cancel_queue.enqueue(job_id.clone());
         with_transaction(&self.pool, |tx| render_job::repo::save(tx, &found_job))?;
         log::info!("Scheduled cancellation for job (job_id={job_id}).");
+
+        Ok(())
+    }
+
+    pub async fn delete_job(&self, req: v1::DeleteJobRequest) -> Result<(), AppError> {
+        let job_id = req.job_id;
+
+        // Fetch job
+        let job_opt = with_conn(&self.pool, |conn| {
+            render_job::repo::get_by_id(conn, &job_id)
+        })?;
+        if job_opt.is_none() {
+            return Err(AppError::BadRequest("Job not found.".to_string()));
+        }
+        let job = job_opt.unwrap();
+
+        // Validate status
+        let job_status_valid = match job.status {
+            JobStatus::Canceled
+            | JobStatus::Failed
+            | JobStatus::Succeeded
+            | JobStatus::Uploading
+            | JobStatus::UploadFailed => true,
+            _ => false,
+        };
+        if !job_status_valid {
+            return Err(AppError::BadRequest(
+                "Job must be completed or canceled.".to_string(),
+            ));
+        }
+
+        // Remove s3 artifacts
+        let s3_client = self.s3_manager.get_client().await?;
+        delete_job_files(&s3_client, &job_id).await?;
+
+        // Remove thumbnails path
+        let thumbnails_path = get_job_thumbnails_path(&self.handle, &job_id);
+        if thumbnails_path.exists() && thumbnails_path.is_dir() {
+            fs::remove_dir_all(thumbnails_path)?;
+        }
+
+        // Delete job
+        with_transaction(&self.pool, |tx| render_job::repo::delete(tx, &job_id))?;
 
         Ok(())
     }

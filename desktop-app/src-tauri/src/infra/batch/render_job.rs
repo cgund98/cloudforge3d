@@ -35,7 +35,6 @@ pub async fn list_incomplete_jobs(
         .collect::<Vec<_>>();
 
     let job_count = query_res.len();
-
     log::info!("Found {job_count} jobs.");
 
     let job_ids = query_res
@@ -51,6 +50,9 @@ pub async fn list_incomplete_jobs(
         })
         .flat_map(|sum| sum.job_id)
         .collect::<Vec<_>>();
+
+    let filtered_count = job_ids.len();
+    log::info!("Filtered to {filtered_count} unfinished jobs.");
 
     Ok(job_ids)
 }

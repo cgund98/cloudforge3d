@@ -33,7 +33,6 @@
 
   $: time = determineTaskTimes(task);
   $: color = mapTaskStatusToColor(task.status)
-  $: console.log(color);
 </script>
 
 <div class="dropdown dropdown-left">

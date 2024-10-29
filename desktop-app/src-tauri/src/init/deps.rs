@@ -25,6 +25,9 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
     let pool = init_db(handle).unwrap();
     let repos = init_repos(handle).await;
 
+    // AWS SDK client managers
+    let s3_client_manager = Arc::new(S3ClientManager::new(repos.settings_repo.clone()));
+
     // Initialize queues for inter-process communication
     let file_upload_queue = Arc::new(FileUploadQueue::new());
     let thumbnail_queue = Arc::new(ThumbnailGeneratorQueue::new());
@@ -35,6 +38,8 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
         pool.clone(),
         file_upload_queue.clone(),
         cancel_queue.clone(),
+        s3_client_manager.clone(),
+        async_handle.clone(),
     );
     let task_ctrl = Arc::new(biz::render_task::controller::Controller::new(
         pool.clone(),
@@ -50,7 +55,7 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
         settings_ctrl: Some(settings_ctrl),
     };
     // Spawn a separate thread for the file upload processor
-    let s3_client_manager = Arc::new(S3ClientManager::new(repos.settings_repo.clone()));
+
     let batch_client_manager = BatchClientManager::new(repos.settings_repo.clone());
     let processor = FileUploadProcessor::new(
         pool.clone(),

@@ -2,6 +2,7 @@ use std::{fs::File, path::PathBuf};
 
 use gif::{Encoder, Frame, Repeat};
 use regex::Regex;
+use tauri::{AppHandle, Manager};
 
 use crate::errors::AppError;
 
@@ -13,6 +14,11 @@ fn extract_frame_number(filename: &str) -> Option<i32> {
         }
     }
     None
+}
+
+pub fn get_job_thumbnails_path(handle: &AppHandle, job_id: &str) -> PathBuf {
+    let data_dir = handle.path().app_data_dir().unwrap();
+    data_dir.join("thumbnails/jobs").join(&job_id)
 }
 
 pub async fn generate_job_thumbnail_gif(

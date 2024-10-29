@@ -38,3 +38,12 @@ pub fn cancel_job(
     let ctrl = state.job_ctrl.as_ref().unwrap();
     ctrl.cancel_job(input)
 }
+
+#[tauri::command]
+pub async fn delete_job(
+    input: v1::DeleteJobRequest,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let ctrl = state.job_ctrl.as_ref().unwrap();
+    ctrl.delete_job(input).await
+}

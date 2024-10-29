@@ -25,6 +25,9 @@ pub enum AppError {
     #[error("500 <|> Unable to complete download from S3: {0}")]
     S3DownloadError(String),
 
+    #[error("500 <|> Unable to deleting files from S3: {0}")]
+    S3DeleteError(String),
+
     #[error("500 <|> Unable to read from SQS queue: {0}")]
     SQSError(String),
 

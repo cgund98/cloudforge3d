@@ -19,7 +19,7 @@ use crate::{
                 entity::{RenderTask, TaskStatus},
             },
         },
-        s3::{self, client_manager::S3ClientManager},
+        s3::{self, client_manager::S3ClientManager, job_file::delete_job_files},
     },
     interface::events::{emit_job_file_upload_progress_event, emit_job_status_update_event},
     spec::proto::v1::JobFileUploadProgressEvent,
@@ -119,7 +119,7 @@ impl FileUploadProcessor {
         input: FileUploadProcessorInput,
     ) -> Result<(), AppError> {
         let job_id = input.job_id.clone();
-        let job_query = with_conn(&self.pool, |conn| repo::get_by_id(conn, &job_id))?;
+        let mut job_query = with_conn(&self.pool, |conn| repo::get_by_id(conn, &job_id))?;
 
         if job_query.is_none() {
             log::info!("Job (job_id={job_id}) does not exist. Skipping upload.");
@@ -137,9 +137,9 @@ impl FileUploadProcessor {
             log::info!("Uploading OCIO file ({target_key})...");
             s3::job_file::upload_job_file(
                 &s3_client,
-                job_id.clone(),
+                &job_id,
                 entry.source_path,
-                target_key,
+                &target_key,
                 |p| self.emit_progress(p),
             )
             .await?;
@@ -155,10 +155,19 @@ impl FileUploadProcessor {
             .into_owned();
 
         log::info!("Uploading blend file ({blend_name})");
-        s3::job_file::upload_job_file(&s3_client, job_id, blend_path, blend_key, |p| {
+        s3::job_file::upload_job_file(&s3_client, &job_id, blend_path, &blend_key, |p| {
             self.emit_progress(p)
         })
         .await?;
+
+        // Make sure the job wasn't deleted while uploads occured
+        job_query = with_conn(&self.pool, |conn| repo::get_by_id(conn, &job_id))?;
+        if job_query.is_none() {
+            log::info!("Job (job_id={job_id}) deleted while uploading.");
+            delete_job_files(&s3_client, &job_id).await?;
+            return Ok(());
+        }
+        job = job_query.unwrap();
 
         // Update job status
         job.status = JobStatus::Pending;

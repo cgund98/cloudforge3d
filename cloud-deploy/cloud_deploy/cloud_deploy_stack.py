@@ -135,8 +135,8 @@ class CloudDeployStack(Stack):
                 actions=[
                     "s3:AbortMultipartUpload",
                     "s3:ListBucketMultipartUploads",
-                    "s3:PutObject",
-                    "s3:GetObject",
+                    "s3:*Object",
+                    "s3:ListBucket",
                 ],
                 resources=[bucket.bucket_arn, bucket.bucket_arn + "*"],
             )

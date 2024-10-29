@@ -91,8 +91,8 @@ pub fn set_has_preview(
     Ok(())
 }
 
-// Persist a RenderJob to the database
-pub fn save(tx: &rusqlite::Transaction, job: &RenderJob) -> Result<(), AppError> {
+// Persist a new RenderJob to the database.
+pub fn create(tx: &rusqlite::Transaction, job: &RenderJob) -> Result<(), AppError> {
     // SQL statement
     let sql: &str = "
         INSERT INTO render_job (
@@ -113,22 +113,7 @@ pub fn save(tx: &rusqlite::Transaction, job: &RenderJob) -> Result<(), AppError>
         )
         VALUES (
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            status = excluded.status,
-            created_at = excluded.created_at,
-            queued_at = excluded.queued_at,
-            completed_at = excluded.completed_at,
-            file_name = excluded.file_name,
-            file_size_mb = excluded.file_size_mb,
-            frame_count = excluded.frame_count,
-            frame_rate = excluded.frame_rate,
-            frame_start = excluded.frame_start,
-            download_path = excluded.download_path,
-            has_preview = excluded.has_preview,
-            frame_rendered_count = excluded.frame_rendered_count;
-        ";
+        )";
 
     // Execute query
     tx.execute(
@@ -150,6 +135,59 @@ pub fn save(tx: &rusqlite::Transaction, job: &RenderJob) -> Result<(), AppError>
             &job.frame_rendered_count,
         ),
     )?;
+
+    Ok(())
+}
+
+// Persist a RenderJob to the database. Assumes it already exists
+pub fn save(tx: &rusqlite::Transaction, job: &RenderJob) -> Result<(), AppError> {
+    // SQL statement
+    let sql: &str = "
+        UPDATE render_job
+        SET
+            name = ?,
+            status = ?,
+            created_at = ?,
+            queued_at = ?,
+            completed_at = ?,
+            file_name = ?,
+            file_size_mb = ?,
+            frame_count = ?,
+            frame_rate = ?,
+            frame_start = ?,
+            download_path = ?,
+            has_preview = ?,
+            frame_rendered_count = ?
+        WHERE id = ?";
+
+    // Execute query
+    tx.execute(
+        sql,
+        (
+            &job.name,
+            &job.status.to_string(),
+            &job.created_at,
+            &job.queued_at,
+            &job.completed_at,
+            &job.file_name,
+            &job.file_size_mb,
+            &job.frame_count,
+            &job.frame_rate,
+            &job.frame_start,
+            &job.download_path,
+            &job.has_preview,
+            &job.frame_rendered_count,
+            &job.id,
+        ),
+    )?;
+
+    Ok(())
+}
+
+pub fn delete(tx: &rusqlite::Transaction, job_id: &str) -> Result<(), AppError> {
+    let sql: &str = "DELETE FROM render_job WHERE id = ?";
+
+    tx.execute(sql, rusqlite::params![job_id])?;
 
     Ok(())
 }

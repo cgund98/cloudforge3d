@@ -5,7 +5,7 @@ use std::{sync::Arc, thread};
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    biz::thumbnail::generate_job_thumbnail_gif,
+    biz::thumbnail::{generate_job_thumbnail_gif, get_job_thumbnails_path},
     errors::AppError,
     infra::db::{
         decorator::{with_conn, with_transaction},
@@ -129,8 +129,7 @@ impl ThumbnailGenerator {
         let job = job_opt.unwrap();
 
         // Generate thumbnail path
-        let data_dir = self.handle.path().app_data_dir().unwrap();
-        let thumbnails_path = data_dir.join("thumbnails/jobs").join(&job_id);
+        let thumbnails_path = get_job_thumbnails_path(&self.handle, &job_id);
 
         let did_generate_thumbnail = generate_job_thumbnail_gif(thumbnails_path, job.frame_rate)
             .await

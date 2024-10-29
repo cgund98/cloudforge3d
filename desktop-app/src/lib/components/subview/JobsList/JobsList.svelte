@@ -5,8 +5,10 @@
   import type { ListJobsItem } from "$lib/data/jobs/commands/listJobs";
   import { listJobs } from "$lib/data/jobs/commands/listJobs";
   import { EventName, type JobStatusUpdateEvent } from "$lib/data/jobs/events";
+  import { ContextKeys } from "$lib/state";
   import { listen } from "@tauri-apps/api/event";
-  import { onDestroy } from "svelte";
+  import { getContext, onDestroy } from "svelte";
+  import type { Writable } from "svelte/store";
 
   let page: number = $state(0);
   let pageCount = 0;
@@ -20,8 +22,8 @@
     const limit = pageSize;
     listJobs({ offset, limit })
       .then((res) => {
-        jobs = res.jobs;
-        total = res.total;
+        jobs = res.jobs ?? [];
+        total = res.total ?? 0;
         pageCount = Math.ceil(total / pageSize);
       })
       .catch(console.error);
@@ -36,7 +38,7 @@
       (e) => {
         const event = JSON.parse(e.payload) as JobStatusUpdateEvent;
         const found = jobs.find(j => j.id === event.jobId)
-        if (jobs.length < pageCount ||  found !== undefined) fetch()
+        if (!jobs || jobs.length < pageCount ||  found !== undefined) fetch()
       }
     );
     unMountFn = unlisten;
@@ -46,6 +48,14 @@
 
   onDestroy(() => {
     unMountFn();
+  });
+
+  // Refresh on selectedJobId change
+  const selectedJobId = getContext(
+    ContextKeys.SELECTED_JOB_ID
+  ) as Writable<string>;
+  selectedJobId.subscribe((jobId) => {
+    if (!jobId) fetch();
   });
 
 </script>

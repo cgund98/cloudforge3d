@@ -19,6 +19,7 @@
   import { slide } from "svelte/transition";
   import { cancelJob } from "$lib/data/jobs/commands/cancelJob";
   import TrashIcon from "$lib/components/display/icons/TrashIcon.svelte";
+  import { deleteJob } from "$lib/data/jobs/commands/deleteJob";
 
   let job: Job | null = null;
   let tasks: Task[] = [];
@@ -41,7 +42,6 @@
   };
 
   selectedJobId.subscribe((jobId) => {
-    console.log("Selected job ID changed:", jobId);
     const delay = job?.id ? 300 : 0;
     if (jobId !== job?.id) job = null;
 

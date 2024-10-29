@@ -144,6 +144,7 @@ impl CancelProcessor {
         batch::render_job::cancel_jobs(client, batch_job_ids).await?;
 
         // Update statuses
+        log::info!("Updating job status to cancelled.");
         job.status = render_job::entity::JobStatus::Canceled;
         tasks = tasks
             .into_iter()

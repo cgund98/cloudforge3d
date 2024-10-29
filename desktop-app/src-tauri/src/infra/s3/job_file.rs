@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::{fs, path::PathBuf};
 
+use aws_sdk_s3::types::{Delete, ObjectIdentifier};
 use aws_sdk_s3::{
     operation::create_multipart_upload::CreateMultipartUploadOutput,
     primitives::{ByteStream, Length},
@@ -56,13 +57,13 @@ async fn parse_chunks_count(path: PathBuf) -> Result<(u64, u64), AppError> {
 // Upload a large file to the job S3 bucket.
 pub async fn upload_job_file(
     client: &aws_sdk_s3::Client,
-    job_id: String,
+    job_id: &str,
     source_path: PathBuf,
-    target_key: String,
+    target_key: &str,
     progress_callback: impl Fn(Progress) -> Result<(), AppError>,
 ) -> Result<(), AppError> {
     // Generate object path
-    let upload_path = generate_input_path(&job_id, &target_key);
+    let upload_path = generate_input_path(job_id, target_key);
 
     let file_name = source_path
         .file_name()
@@ -130,7 +131,7 @@ pub async fn upload_job_file(
 
         // Notify of upload progress
         let _ = progress_callback(Progress {
-            job_id: job_id.clone(),
+            job_id: job_id.to_string(),
             file_name: file_name.to_string(),
             uploaded: chunk_index + 1,
             total: chunk_count,
@@ -209,4 +210,58 @@ pub async fn download_job_file(
     log::info!("Done downloading file of size ({kb_count} kB) from s3 ({source_path})...");
 
     Ok(byte_count)
+}
+
+// Delete all files belonging to a specific job
+pub async fn delete_job_files(client: &aws_sdk_s3::Client, job_id: &str) -> Result<(), AppError> {
+    let job_path = format!("jobs/{job_id}/");
+
+    log::info!("Searching for objects to delete...");
+    let objects = client
+        .list_objects_v2()
+        .bucket(BUCKET_NAME)
+        .prefix(job_path)
+        .into_paginator()
+        .send()
+        .try_collect()
+        .await
+        .inspect(|_| log::info!("Got paginated response."))
+        .map_err(|e| {
+            if let Some(err) = e.as_service_error() {
+                return AppError::S3DeleteError(format!("{err}"));
+            }
+            AppError::S3DeleteError(format!("{e}"))
+        })?
+        .into_iter()
+        .flat_map(|o| o.contents.unwrap_or_default())
+        .collect::<Vec<_>>();
+
+    log::info!("Fetch objects.");
+
+    let delete_objects: Vec<ObjectIdentifier> = objects
+        .into_iter()
+        .flat_map(|obj| {
+            ObjectIdentifier::builder()
+                .key(obj.key.unwrap_or_default())
+                .build()
+        })
+        .collect::<Vec<_>>();
+
+    let obj_count = delete_objects.len();
+    log::info!("Will delete {obj_count} objects.");
+
+    let delete = Delete::builder()
+        .set_objects(Some(delete_objects))
+        .build()
+        .map_err(|e| AppError::S3DeleteError(format!("{e}")))?;
+
+    client
+        .delete_objects()
+        .bucket(BUCKET_NAME)
+        .delete(delete)
+        .send()
+        .await
+        .map_err(|e| AppError::S3DeleteError(format!("{e}")))?;
+
+    Ok(())
 }
