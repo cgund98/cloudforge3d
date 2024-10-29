@@ -9,7 +9,7 @@ pub fn gen_migrations() -> Migrations<'static> {
             CREATE TABLE render_job (
                 id VARCHAR(255) PRIMARY KEY,
                 name VARCHAR(1024) NOT NULL,
-                status VARCHAR(255) CHECK(status IN ('uploading', 'upload-failed', 'pending', 'running', 'succeeded', 'failed', 'canceled')) NOT NULL,
+                status VARCHAR(255) CHECK(status IN ('uploading', 'upload-failed', 'pending', 'running', 'succeeded', 'failed', 'canceled', 'canceling')) NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 queued_at DATETIME,
                 completed_at DATETIME,
@@ -34,9 +34,9 @@ pub fn gen_migrations() -> Migrations<'static> {
                 started_at DATETIME,
                 queued_at DATETIME,
                 completed_at DATETIME,
-                status VARCHAR(255) CHECK(status IN ('pending', 'running', 'succeeded', 'failed')) NOT NULL,
+                status VARCHAR(255) CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'canceled')) NOT NULL,
                 retry_count INTEGER NOT NULL DEFAULT 0,
-                FOREIGN KEY (job_id) REFERENCES render_job(id) ON CASCADE DELETE -- Foreign key constraint
+                FOREIGN KEY (job_id) REFERENCES render_job(id) ON DELETE CASCADE -- Foreign key constraint
             );
         "),
     ])

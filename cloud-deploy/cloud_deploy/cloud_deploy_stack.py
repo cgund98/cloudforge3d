@@ -144,10 +144,11 @@ class CloudDeployStack(Stack):
 
         app_group.add_to_policy(
             iam.PolicyStatement(
-                actions=["batch:SubmitJob"],
+                actions=["batch:SubmitJob", "batch:CancelJob"],
                 resources=[
                     f"arn:aws:batch:{region}:{account}:job-definition/cf3d*",
                     f"arn:aws:batch:{region}:{account}:job-queue/cf3d*",
+                    f"arn:aws:batch:{region}:{account}:job/*",
                 ],
             )
         )

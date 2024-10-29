@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use std::path::Path;
 
+use tauri::App;
+
 use super::upload_processor::FileUploadProcessorInput;
 use super::validation;
 use crate::errors::AppError;
@@ -16,16 +18,19 @@ use crate::spec::timestamp::to_pb_timestamp;
 pub struct Controller {
     pool: Arc<PoolType>,
     file_upload_queue: Arc<super::upload_processor::FileUploadQueue>,
+    cancel_queue: Arc<super::cancel_processor::CancelProcessorQueue>,
 }
 
 impl Controller {
     pub fn new(
         pool: Arc<PoolType>,
         file_upload_queue: Arc<super::upload_processor::FileUploadQueue>,
+        cancel_queue: Arc<super::cancel_processor::CancelProcessorQueue>,
     ) -> Controller {
         Controller {
             pool,
             file_upload_queue,
+            cancel_queue,
         }
     }
 
@@ -145,5 +150,38 @@ impl Controller {
         }
 
         Ok(v1::GetJobResponse { job: None })
+    }
+
+    pub fn cancel_job(&self, req: v1::CancelJobRequest) -> Result<(), AppError> {
+        let job_id = req.job_id;
+
+        let job = with_conn(&self.pool, |conn| {
+            render_job::repo::get_by_id(conn, &job_id)
+        })?;
+
+        if job.is_none() {
+            return Err(AppError::BadRequest("Job not found.".to_string()));
+        }
+
+        let mut found_job = job.unwrap();
+
+        // Validate status
+        if found_job.status == render_job::entity::JobStatus::Canceled {
+            return Err(AppError::BadRequest(
+                "Job has already been canceled.".to_string(),
+            ));
+        } else if found_job.status == render_job::entity::JobStatus::Uploading {
+            return Err(AppError::BadRequest(
+                "Cannot cancel an uploading job.".to_string(),
+            ));
+        }
+
+        // Do cancellation
+        found_job.status = render_job::entity::JobStatus::Canceling;
+        self.cancel_queue.enqueue(job_id.clone());
+        with_transaction(&self.pool, |tx| render_job::repo::save(tx, &found_job))?;
+        log::info!("Scheduled cancellation for job (job_id={job_id}).");
+
+        Ok(())
     }
 }

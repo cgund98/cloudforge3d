@@ -76,11 +76,13 @@
       <p>{Math.floor(progress * 100)}%</p>
     </div>
 
+    {#if job.status !== JobStatus.Canceled}
     <progress
       class="progress progress-success h-1"
       value={finishedCount}
       max={tasks.length}
     ></progress>
+    {/if}
   </div>
   <div
     class="collapse-content px-0 overflow-hidden peer-checked:overflow-visible"

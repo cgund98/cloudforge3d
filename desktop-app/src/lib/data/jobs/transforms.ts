@@ -15,7 +15,7 @@ export const mapJobStatusToColor = (status: JobStatus): string => {
     case JobStatus.UploadFailed:
       return "error";
     default:
-      return "info";
+      return "error";
   }
 };
 
@@ -28,8 +28,9 @@ export const mapTaskStatusToColor = (status: TaskStatus): string => {
     case TaskStatus.Succeeded:
       return "success";
     case TaskStatus.Failed:
+    case TaskStatus.Canceled:
       return "error";
     default:
-      return "info";
+      return "error";
   }
 };

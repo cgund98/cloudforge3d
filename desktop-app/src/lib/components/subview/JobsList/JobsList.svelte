@@ -36,7 +36,7 @@
       (e) => {
         const event = JSON.parse(e.payload) as JobStatusUpdateEvent;
         const found = jobs.find(j => j.id === event.jobId)
-        if (found !== undefined) fetch()
+        if (jobs.length < pageCount ||  found !== undefined) fetch()
       }
     );
     unMountFn = unlisten;

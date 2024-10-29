@@ -3,6 +3,7 @@ export enum TaskStatus {
   Running = "running",
   Succeeded = "succeeded",
   Failed = "failed",
+  Canceled = "canceled",
 }
 
 export interface Task {

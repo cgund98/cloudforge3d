@@ -11,7 +11,7 @@ use crate::{
             pool::PoolType,
             render_job, render_task,
         },
-        s3::job_file::download_job_file,
+        s3::{client_manager::CachedClient, job_file::download_job_file},
     },
     interface::events::emit_job_status_update_event,
     spec::{proto::v1, timestamp::to_pb_timestamp},
@@ -92,6 +92,7 @@ impl Controller {
         match input.status() {
             v1::TaskStatus::Unspecified => (),
             v1::TaskStatus::Pending => (),
+            v1::TaskStatus::Canceled => task.completed_at = Some(now),
             v1::TaskStatus::Running => task.started_at = Some(now),
             v1::TaskStatus::Failed => task.completed_at = Some(now),
             v1::TaskStatus::Succeeded => task.completed_at = Some(now),
@@ -122,8 +123,14 @@ impl Controller {
         let other_tasks_complete = remaining_task_count == 0;
 
         // Update job fields
+        let job_canceled = job.status == render_job::entity::JobStatus::Canceled
+            || job.status == render_job::entity::JobStatus::Canceling;
         let job_failed = job.status == render_job::entity::JobStatus::Failed;
-        if task.status == render_task::entity::TaskStatus::Failed {
+
+        if job_canceled {
+            // If job has been cancelled, do not handle any updates here.
+            return Ok(());
+        } else if task.status == render_task::entity::TaskStatus::Failed {
             job.status = render_job::entity::JobStatus::Failed;
         } else if task.status == render_task::entity::TaskStatus::Running && !job_failed {
             job.status = render_job::entity::JobStatus::Running;

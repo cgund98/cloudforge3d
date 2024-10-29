@@ -22,28 +22,31 @@ const QUEUE_NAME: &str = "cf3d-task-updates.fifo";
 pub struct TaskStatusUpdateConsumer {
     queue_url: Option<String>,
     handle: Arc<AppHandle>,
+    s3_manager: Arc<S3ClientManager>,
 }
 
 impl TaskStatusUpdateConsumer {
-    pub fn new(handle: Arc<AppHandle>) -> TaskStatusUpdateConsumer {
+    pub fn new(
+        handle: Arc<AppHandle>,
+        s3_manager: Arc<S3ClientManager>,
+    ) -> TaskStatusUpdateConsumer {
         TaskStatusUpdateConsumer {
             queue_url: None,
             handle,
+            s3_manager,
         }
     }
 
     pub async fn listen_for_task_status_updates(
         &mut self,
         mut sqs_manager: SqsClientManager,
-        mut s3_manager: S3ClientManager,
         controller: &Controller,
     ) -> Result<(), AppError> {
         loop {
             let sqs_client_res = sqs_manager.get_client().await;
-            let s3_client_res = s3_manager.get_client().await;
 
-            if s3_client_res.is_err() || sqs_client_res.is_err() {
-                let e = s3_client_res.err().unwrap_or(sqs_client_res.unwrap_err());
+            if sqs_client_res.is_err() {
+                let e = sqs_client_res.unwrap_err();
                 log::error!("Unable create SQS or S3 client: {e}");
 
                 // Sleep to prevent infinite loops
@@ -53,10 +56,9 @@ impl TaskStatusUpdateConsumer {
             }
 
             let sqs_client = sqs_client_res.unwrap();
-            let s3_client = s3_client_res.unwrap();
 
             let _ = self
-                .get_batch_of_messages(sqs_client, s3_client, controller)
+                .get_batch_of_messages(sqs_client, controller)
                 .await
                 .inspect_err(|e| {
                     log::error!("Encountered error while handling batch of status updates: {e}");
@@ -75,7 +77,6 @@ impl TaskStatusUpdateConsumer {
     async fn get_batch_of_messages(
         &mut self,
         sqs_client: &aws_sdk_sqs::Client,
-        s3_client: &aws_sdk_s3::Client,
         controller: &Controller,
     ) -> Result<i32, AppError> {
         if self.queue_url.is_none() {
@@ -115,8 +116,19 @@ impl TaskStatusUpdateConsumer {
                 AppError::SQSError(format!("could not fetch messages: {e}"))
             })?;
 
+        let msgs_unwrapped = msgs_response.messages.unwrap_or_default();
+
+        // Skip if no messages were found.
+        if msgs_unwrapped.len() == 0 {
+            return Ok(0);
+        }
+
+        // Fetch s3 client
+        let s3_client = self.s3_manager.get_client().await?;
+
+        // Iterate over each client
         let mut handled_count = 0;
-        for message in msgs_response.messages.unwrap_or_default() {
+        for message in msgs_unwrapped {
             let handle_opt = message.receipt_handle;
             if handle_opt.is_none() {
                 return Err(AppError::SQSError(
@@ -133,7 +145,7 @@ impl TaskStatusUpdateConsumer {
             log::info!("Handling status update for task (id={task_id})");
 
             controller
-                .handle_status_update(body_parsed.clone(), s3_client)
+                .handle_status_update(body_parsed.clone(), &s3_client)
                 .await?;
 
             sqs_client

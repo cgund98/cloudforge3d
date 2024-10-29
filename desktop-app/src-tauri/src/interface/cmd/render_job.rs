@@ -29,3 +29,12 @@ pub fn get_job(
     let ctrl = state.job_ctrl.as_ref().unwrap();
     ctrl.get_job(input)
 }
+
+#[tauri::command]
+pub fn cancel_job(
+    input: v1::CancelJobRequest,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let ctrl = state.job_ctrl.as_ref().unwrap();
+    ctrl.cancel_job(input)
+}

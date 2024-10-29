@@ -22,6 +22,7 @@ pub enum TaskStatus {
     Running,
     Succeeded,
     Failed,
+    Canceled,
 }
 
 impl std::str::FromStr for TaskStatus {
@@ -34,6 +35,7 @@ impl std::str::FromStr for TaskStatus {
             "running" => Ok(TaskStatus::Running),
             "succeeded" => Ok(TaskStatus::Succeeded),
             "failed" => Ok(TaskStatus::Failed),
+            "canceled" => Ok(TaskStatus::Canceled),
             _ => Err(()),
         }
     }
@@ -47,6 +49,7 @@ impl ToString for TaskStatus {
             TaskStatus::Running => "running".to_string(),
             TaskStatus::Succeeded => "succeeded".to_string(),
             TaskStatus::Failed => "failed".to_string(),
+            TaskStatus::Canceled => "canceled".to_string(),
         }
     }
 }
@@ -59,6 +62,7 @@ impl From<v1::TaskStatus> for TaskStatus {
             v1::TaskStatus::Running => TaskStatus::Running,
             v1::TaskStatus::Succeeded => TaskStatus::Succeeded,
             v1::TaskStatus::Failed => TaskStatus::Failed,
+            v1::TaskStatus::Canceled => TaskStatus::Canceled,
         }
     }
 }
@@ -71,6 +75,7 @@ impl Into<v1::TaskStatus> for TaskStatus {
             TaskStatus::Running => v1::TaskStatus::Running,
             TaskStatus::Succeeded => v1::TaskStatus::Succeeded,
             TaskStatus::Failed => v1::TaskStatus::Failed,
+            TaskStatus::Canceled => v1::TaskStatus::Canceled,
         }
     }
 }

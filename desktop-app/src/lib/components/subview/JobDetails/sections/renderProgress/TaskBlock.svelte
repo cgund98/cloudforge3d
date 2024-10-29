@@ -32,6 +32,8 @@
   let time: {label: string, value: string} | undefined = undefined;
 
   $: time = determineTaskTimes(task);
+  $: color = mapTaskStatusToColor(task.status)
+  $: console.log(color);
 </script>
 
 <div class="dropdown dropdown-left">
@@ -42,7 +44,7 @@
     )} rounded-sm cursor-pointer"
     role="button"
     onclick={() => time = determineTaskTimes(task)}
-  />
+></div>
   <div
     tabindex="-1"
     class="dropdown-content menu bg-base-200 border-[1px] border-base-300 rounded-md z-[1] w-52 p-2 px-1 shadow"
@@ -52,23 +54,23 @@
       <p>{task.frameNumber}</p>
     </div>
 
-    <div class="divider py-0 my-0" />
+    <div class="divider py-0 my-0"></div>
 
     <div class="flex justify-between px-2">
       <p class="font-medium">Status</p>
-      <p class="text-info text-{mapTaskStatusToColor(task.status)} capitalize">
+      <p class="text-{color} capitalize">
         {task.status}
       </p>
     </div>
 
-    <div class="divider py-0 my-0" />
+    <div class="divider py-0 my-0"></div>
 
     <div class="flex justify-between px-2">
       <p class="font-medium">{time?.label}</p>
       <p>{time?.value}</p>
     </div>
 
-    <div class="divider py-0 my-0" />
+    <div class="divider py-0 my-0"></div>
 
     <div class="flex justify-between">
       {#if task.status === TaskStatus.Failed || task.status === TaskStatus.Succeeded}

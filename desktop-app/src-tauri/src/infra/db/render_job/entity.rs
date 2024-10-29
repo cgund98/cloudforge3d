@@ -26,6 +26,7 @@ pub enum JobStatus {
     Running,
     Succeeded,
     Failed,
+    Canceling,
     Canceled,
 }
 
@@ -40,6 +41,7 @@ impl std::str::FromStr for JobStatus {
             "running" => Ok(JobStatus::Running),
             "succeeded" => Ok(JobStatus::Succeeded),
             "failed" => Ok(JobStatus::Failed),
+            "canceling" => Ok(JobStatus::Canceling),
             "canceled" => Ok(JobStatus::Canceled),
             _ => Err(()),
         }
@@ -55,6 +57,7 @@ impl ToString for JobStatus {
             JobStatus::Running => "running".to_string(),
             JobStatus::Succeeded => "succeeded".to_string(),
             JobStatus::Failed => "failed".to_string(),
+            JobStatus::Canceling => "canceling".to_string(),
             JobStatus::Canceled => "canceled".to_string(),
         }
     }

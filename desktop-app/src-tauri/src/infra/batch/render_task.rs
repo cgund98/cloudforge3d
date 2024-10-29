@@ -1,9 +1,7 @@
 use aws_sdk_batch::types::KeyValuePair;
 
+use super::constants::{JOB_DEF_NAME, QUEUE_NAME};
 use crate::{errors::AppError, infra::db::render_task::entity::RenderTask};
-
-const QUEUE_NAME: &str = "cf3d-job-queue";
-const JOB_DEF_NAME: &str = "cf3d-cpu-job-definition";
 
 // Submit a task job
 pub async fn submit_job(client: &aws_sdk_batch::Client, task: &RenderTask) -> Result<(), AppError> {

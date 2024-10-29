@@ -17,6 +17,8 @@
   import type { Task } from "$lib/data/tasks/task";
   import { mapJobStatusToColor } from "$lib/data/jobs/transforms";
   import { slide } from "svelte/transition";
+  import { cancelJob } from "$lib/data/jobs/commands/cancelJob";
+  import TrashIcon from "$lib/components/display/icons/TrashIcon.svelte";
 
   let job: Job | null = null;
   let tasks: Task[] = [];
@@ -39,7 +41,7 @@
   };
 
   selectedJobId.subscribe((jobId) => {
-    console.log("Selected job ID changed:", jobId)
+    console.log("Selected job ID changed:", jobId);
     const delay = job?.id ? 300 : 0;
     if (jobId !== job?.id) job = null;
 
@@ -85,20 +87,38 @@
       </div>
 
       <div class="flex space-x-3">
-        {#if !isCompleted(job.status)}
+        {#if !isCompleted(job.status) && job.status !== JobStatus.Uploading}
           <div class="tooltip tooltip-bottom" data-tip="Cancel Job">
-            <button class="btn btn-ghost btn-sm btn-square">
-              <StopIcon />
+            <button
+              class="btn btn-ghost btn-sm btn-square"
+              onclick={() =>
+                cancelJob(job?.id ?? "")
+                  .then(fetch)
+                  .catch(console.error)}
+            >
+              <StopIcon></StopIcon>
             </button>
           </div>
+        {:else}
+        <div class="tooltip tooltip-bottom" data-tip="Delete Job">
+          <button
+            class="btn btn-ghost btn-sm btn-square"
+            onclick={() =>
+              deleteJob(job?.id ?? "")
+                .then(() => selectedJobId.set(""))
+                .catch(console.error)}
+          >
+            <TrashIcon></TrashIcon>
+          </button>
+        </div>
         {/if}
-        {#if job.status === JobStatus.Failed}
+        <!-- {#if job.status === JobStatus.Failed}
           <div class="tooltip tooltip-bottom" data-tip="Retry Failed Tasks">
             <button class="btn btn-ghost btn-sm btn-square">
-              <RefreshIcon />
+              <RefreshIcon></RefreshIcon>
             </button>
           </div>
-        {/if}
+        {/if} -->
 
         <div class="tooltip tooltip-bottom" data-tip="Close">
           <button
@@ -114,7 +134,7 @@
     <!-- Sections -->
 
     <div class="flex flex-col space-y-4">
-        <PreviewSection {job} />
+      <PreviewSection {job} />
 
       {#if job.status !== JobStatus.Uploading && job.status !== JobStatus.UploadFailed}
         <RenderProgressSection {job} {tasks} />

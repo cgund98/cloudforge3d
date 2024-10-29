@@ -6,6 +6,7 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
 use crate::biz;
+use crate::biz::render_job::cancel_processor::{CancelProcessor, CancelProcessorQueue};
 use crate::biz::render_job::thumbnail_generator::{ThumbnailGenerator, ThumbnailGeneratorQueue};
 use crate::biz::render_job::upload_processor::FileUploadQueue;
 use crate::infra::batch::client_manager::BatchClientManager;
@@ -24,13 +25,17 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
     let pool = init_db(handle).unwrap();
     let repos = init_repos(handle).await;
 
-    // Initialize queues for process communication
+    // Initialize queues for inter-process communication
     let file_upload_queue = Arc::new(FileUploadQueue::new());
     let thumbnail_queue = Arc::new(ThumbnailGeneratorQueue::new());
+    let cancel_queue = Arc::new(CancelProcessorQueue::new());
 
     // Initialize controllers
-    let job_ctrl =
-        biz::render_job::controller::Controller::new(pool.clone(), file_upload_queue.clone());
+    let job_ctrl = biz::render_job::controller::Controller::new(
+        pool.clone(),
+        file_upload_queue.clone(),
+        cancel_queue.clone(),
+    );
     let task_ctrl = Arc::new(biz::render_task::controller::Controller::new(
         pool.clone(),
         async_handle.clone(),
@@ -45,29 +50,27 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
         settings_ctrl: Some(settings_ctrl),
     };
     // Spawn a separate thread for the file upload processor
-    let s3_client_manager = S3ClientManager::new(repos.settings_repo.clone());
+    let s3_client_manager = Arc::new(S3ClientManager::new(repos.settings_repo.clone()));
     let batch_client_manager = BatchClientManager::new(repos.settings_repo.clone());
     let processor = FileUploadProcessor::new(
         pool.clone(),
         file_upload_queue.clone(),
         async_handle.clone(),
+        s3_client_manager.clone(),
     );
 
-    tokio::spawn(async move {
-        processor
-            .start_task(s3_client_manager, batch_client_manager)
-            .await
-    });
+    tokio::spawn(async move { processor.start_task(batch_client_manager).await });
 
     // Spawn a separate thread for the task update consumer
     let sqs_client_manager = SqsClientManager::new(repos.settings_repo.clone());
-    let listener_s3_manager = S3ClientManager::new(repos.settings_repo.clone());
-    let mut updates_consumer =
-        task_status_update::TaskStatusUpdateConsumer::new(async_handle.clone());
+    let mut updates_consumer = task_status_update::TaskStatusUpdateConsumer::new(
+        async_handle.clone(),
+        s3_client_manager.clone(),
+    );
 
     tokio::spawn(async move {
         updates_consumer
-            .listen_for_task_status_updates(sqs_client_manager, listener_s3_manager, &task_ctrl)
+            .listen_for_task_status_updates(sqs_client_manager, &task_ctrl)
             .await
     });
 
@@ -75,6 +78,12 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
     let thumbnail_generator =
         ThumbnailGenerator::new(pool.clone(), thumbnail_queue.clone(), async_handle.clone());
     tokio::spawn(async move { thumbnail_generator.start_task().await });
+
+    // Spawn separate thread for job cancellation
+    let cancel_processor =
+        CancelProcessor::new(cancel_queue.clone(), pool.clone(), async_handle.clone());
+    let cancel_batch_manager = BatchClientManager::new(repos.settings_repo.clone());
+    tokio::spawn(async move { cancel_processor.start_task(cancel_batch_manager).await });
 
     state
 }

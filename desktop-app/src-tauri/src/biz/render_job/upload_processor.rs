@@ -53,6 +53,7 @@ pub struct FileUploadProcessor {
     queue: Arc<FileUploadQueue>,
     pool: Arc<PoolType>,
     handle: Arc<AppHandle>,
+    s3_manager: Arc<S3ClientManager>,
 }
 
 // Data object used for persisting in queue.
@@ -76,20 +77,18 @@ impl FileUploadProcessor {
         pool: Arc<PoolType>,
         queue: Arc<FileUploadQueue>,
         handle: Arc<AppHandle>,
+        s3_manager: Arc<S3ClientManager>,
     ) -> FileUploadProcessor {
         FileUploadProcessor {
             queue,
             pool,
             handle,
+            s3_manager,
         }
     }
 
     // Start the process that will continuously read from the queue
-    pub async fn start_task(
-        &self,
-        mut s3_manager: S3ClientManager,
-        mut batch_manager: BatchClientManager,
-    ) {
+    pub async fn start_task(&self, mut batch_manager: BatchClientManager) {
         loop {
             let input = self.queue.pop().await;
             let job_id = input.job_id.clone();
@@ -97,9 +96,7 @@ impl FileUploadProcessor {
 
             log::info!("Handling file upload for job (job_id={job_id})...");
 
-            let result = self
-                .handle_input(&mut s3_manager, &mut batch_manager, input.clone())
-                .await;
+            let result = self.handle_input(&mut batch_manager, input.clone()).await;
 
             // We don't want to exit in case of failure. Re-queue the upload and try again.
             result
@@ -118,7 +115,6 @@ impl FileUploadProcessor {
     // Handle a single file upload
     async fn handle_input(
         &self,
-        s3_manager: &mut S3ClientManager,
         batch_manager: &mut BatchClientManager,
         input: FileUploadProcessorInput,
     ) -> Result<(), AppError> {
@@ -132,7 +128,7 @@ impl FileUploadProcessor {
         let mut job = job_query.unwrap();
 
         // Fetch s3 client
-        let s3_client = s3_manager.get_client().await?;
+        let s3_client = self.s3_manager.get_client().await?;
 
         // Upload OCIO files
         let ocio_paths = FileUploadProcessor::scan_for_ocio_files(&input)?;
@@ -140,7 +136,7 @@ impl FileUploadProcessor {
             let target_key = entry.target_key;
             log::info!("Uploading OCIO file ({target_key})...");
             s3::job_file::upload_job_file(
-                s3_client,
+                &s3_client,
                 job_id.clone(),
                 entry.source_path,
                 target_key,
@@ -159,7 +155,7 @@ impl FileUploadProcessor {
             .into_owned();
 
         log::info!("Uploading blend file ({blend_name})");
-        s3::job_file::upload_job_file(s3_client, job_id, blend_path, blend_key, |p| {
+        s3::job_file::upload_job_file(&s3_client, job_id, blend_path, blend_key, |p| {
             self.emit_progress(p)
         })
         .await?;

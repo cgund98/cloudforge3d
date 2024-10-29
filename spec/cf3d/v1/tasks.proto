@@ -12,6 +12,7 @@ enum TaskStatus {
   TASK_STATUS_RUNNING = 2;
   TASK_STATUS_SUCCEEDED = 3;
   TASK_STATUS_FAILED = 4;
+  TASK_STATUS_CANCELED = 5;
 }
 
 /** Events **/
