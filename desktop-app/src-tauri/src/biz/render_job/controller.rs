@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use std::path::Path;
 
-use tauri::App;
 
 use super::upload_processor::FileUploadProcessorInput;
 use super::validation;

@@ -11,7 +11,7 @@ use crate::{
             pool::PoolType,
             render_job, render_task,
         },
-        s3::{client_manager::CachedClient, job_file::download_job_file},
+        s3::job_file::download_job_file,
     },
     interface::events::emit_job_status_update_event,
     spec::{proto::v1, timestamp::to_pb_timestamp},
