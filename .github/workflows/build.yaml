@@ -30,6 +30,13 @@ jobs:
         working-directory: desktop-app
         run: pnpm run build
 
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Generate Protobuf Snippets
+        run: make gen
+
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
