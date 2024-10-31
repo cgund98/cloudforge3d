@@ -26,9 +26,11 @@ jobs:
           version: 9
 
       - name: Install NPM packages
+        working-directory: desktop-app
         run: pnpm install
 
       - name: Build Frontend
+        working-directory: desktop-app
         run: pnpm run build
 
       - name: Install Rust stable
@@ -40,7 +42,9 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Check package for errors
-        run: cd desktop-app/src-tauri && cargo check --all
+        working-directory: desktop-app/src-tauri
+        run: cargo check --all
 
       - name: Run Clippy
-        run: cd desktop-app/src-tauri && cargo clippy --all-targets --all-features
+        working-directory: desktop-app/src-tauri
+        run: cargo clippy --all-targets --all-features
