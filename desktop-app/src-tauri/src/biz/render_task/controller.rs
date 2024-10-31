@@ -184,6 +184,6 @@ impl Controller {
 
     fn get_thumbnails_path(&self, job_id: &str) -> PathBuf {
         let data_dir = self.handle.path().app_data_dir().unwrap();
-        data_dir.join("thumbnails/jobs").join(&job_id)
+        data_dir.join("thumbnails/jobs").join(job_id)
     }
 }

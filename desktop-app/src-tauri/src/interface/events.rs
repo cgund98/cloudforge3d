@@ -8,14 +8,19 @@ enum EventName {
     JobStatusUpdate,
 }
 
-impl ToString for EventName {
-    fn to_string(&self) -> String {
-        match self {
-            EventName::JobFileUploadProgress => "job-file-upload-progress".to_string(),
-            EventName::JobStatusUpdate => "job-status-update".to_string(),
-        }
+impl std::fmt::Display for EventName {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let name = match self {
+            EventName::JobFileUploadProgress => "job-file-upload-progress",
+            EventName::JobStatusUpdate => "job-status-update",
+        };
+
+        fmt.write_str(name)?;
+        Ok(())
     }
 }
+
+
 
 // Emit a file upload progress event
 pub fn emit_job_file_upload_progress_event(

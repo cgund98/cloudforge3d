@@ -172,7 +172,7 @@ pub async fn download_job_file(
     source_key: &str,
     output_path: PathBuf,
 ) -> Result<usize, AppError> {
-    let source_path = generate_output_path(&job_id, &source_key);
+    let source_path = generate_output_path(job_id, source_key);
 
     // Delete existing file if it exists
     if output_path.exists() {

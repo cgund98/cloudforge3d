@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - '*' # matches every branch that doesn't contain a '/'
+      - '*/*' # matches every branch containing a single '/'
+      - '**' # matches every branch
+      - '!main' # excludes main
+    paths:
+      - 'desktop-app/src/**'
+      - 'desktop-app/src-tauri/**'
+
+jobs:
+  build:
+    name: Build Tauri App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install NPM packages
+        run: pnpm install
+
+      - name: Build Frontend
+        run: pnpm run build
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies (ubuntu only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Check package for errors
+        run: cd desktop-app/src-tauri && cargo check --all
+
+      - name: Run Clippy
+        run: cd desktop-app/src-tauri && cargo clippy --all-targets --all-features

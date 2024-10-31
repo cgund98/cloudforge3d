@@ -18,7 +18,7 @@ fn extract_frame_number(filename: &str) -> Option<i32> {
 
 pub fn get_job_thumbnails_path(handle: &AppHandle, job_id: &str) -> PathBuf {
     let data_dir = handle.path().app_data_dir().unwrap();
-    data_dir.join("thumbnails/jobs").join(&job_id)
+    data_dir.join("thumbnails/jobs").join(job_id)
 }
 
 pub async fn generate_job_thumbnail_gif(
@@ -47,7 +47,7 @@ pub async fn generate_job_thumbnail_gif(
     // Sort by frame number
     frame_paths.sort_by_key(|&(num, _)| num);
 
-    if frame_paths.len() == 0 {
+    if frame_paths.is_empty() {
         log::warn!("Unable to generate thumbnail because no valid preview frames were found.");
         return Ok(false);
     }

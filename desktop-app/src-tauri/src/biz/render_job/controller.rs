@@ -37,7 +37,9 @@ impl Controller {
         s3_manager: Arc<S3ClientManager>,
         handle: Arc<AppHandle>,
     ) -> Controller {
-        let tempdir = tempfile::tempdir().inspect_err(|e| log::error!("Unable to create tempdir: {e}")).unwrap();
+        let tempdir = tempfile::tempdir()
+            .inspect_err(|e| log::error!("Unable to create tempdir: {e}"))
+            .unwrap();
         Controller {
             pool,
             file_upload_queue,
@@ -72,8 +74,7 @@ impl Controller {
 
         // Create tempfile
         let tempfile = self.tempdir.path().join(job_id.clone() + ".blend");
-        fs::copy(&blend_path, &tempfile)?;
-
+        fs::copy(blend_path, &tempfile)?;
 
         // Persist job
         let job = RenderJob {
@@ -101,8 +102,8 @@ impl Controller {
         .unwrap();
 
         // Determine resource requirements
-        let memory_mib = req.memory_mib.unwrap_or(1024*7);
-        let vcpus: u8 = ((memory_mib / 1024 / 2 + 1) as u8).max(2).min(12);
+        let memory_mib = req.memory_mib.unwrap_or(1024 * 7);
+        let vcpus: u8 = ((memory_mib / 1024 / 2 + 1) as u8).max(2);
 
         // Enqueue file upload
         let tempfile_name = tempfile.to_string_lossy().to_string();
@@ -118,14 +119,12 @@ impl Controller {
         self.file_upload_queue.enqueue(input);
         emit_job_status_update_event(&self.handle, &job_id)?;
 
-        Ok(v1::CreateJobResponse {
-            job_id,
-        })
+        Ok(v1::CreateJobResponse { job_id })
     }
 
     pub fn list_jobs(&self, req: v1::ListJobsRequest) -> Result<v1::ListJobsResponse, AppError> {
         let limit = req.limit.unwrap_or(10).min(50);
-        let offset = req.offset.unwrap_or(0).max(0);
+        let offset = req.offset.unwrap_or(0);
 
         let (jobs, count) = with_conn(&self.pool, |conn| {
             render_job::repo::list(conn, limit, offset)
@@ -252,14 +251,14 @@ impl Controller {
         let job = job_opt.unwrap();
 
         // Validate status
-        let job_status_valid = match job.status {
+        let job_status_valid = matches!(
+            job.status,
             JobStatus::Canceled
-            | JobStatus::Failed
-            | JobStatus::Succeeded
-            | JobStatus::Uploading
-            | JobStatus::UploadFailed => true,
-            _ => false,
-        };
+                | JobStatus::Failed
+                | JobStatus::Succeeded
+                | JobStatus::Uploading
+                | JobStatus::UploadFailed
+        );
         if !job_status_valid {
             return Err(AppError::BadRequest(
                 "Job must be completed or canceled.".to_string(),
@@ -283,7 +282,10 @@ impl Controller {
         Ok(())
     }
 
-    pub async fn download_frames(&self, req: v1::DownloadJobOutputsRequest) -> Result<v1::DownloadJobOutputsResponse, AppError> {
+    pub async fn download_frames(
+        &self,
+        req: v1::DownloadJobOutputsRequest,
+    ) -> Result<v1::DownloadJobOutputsResponse, AppError> {
         let job_id = req.job_id;
 
         // Fetch job

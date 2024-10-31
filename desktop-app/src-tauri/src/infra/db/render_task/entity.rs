@@ -41,16 +41,19 @@ impl std::str::FromStr for TaskStatus {
     }
 }
 
-impl ToString for TaskStatus {
-    fn to_string(&self) -> String {
-        match self {
-            TaskStatus::Unknown => "unknown".to_string(),
-            TaskStatus::Pending => "pending".to_string(),
-            TaskStatus::Running => "running".to_string(),
-            TaskStatus::Succeeded => "succeeded".to_string(),
-            TaskStatus::Failed => "failed".to_string(),
-            TaskStatus::Canceled => "canceled".to_string(),
-        }
+impl std::fmt::Display for TaskStatus {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let status = match self {
+            TaskStatus::Unknown => "unknown",
+            TaskStatus::Pending => "pending",
+            TaskStatus::Running => "running",
+            TaskStatus::Succeeded => "succeeded",
+            TaskStatus::Failed => "failed",
+            TaskStatus::Canceled => "canceled",
+        };
+
+        fmt.write_str(status)?;
+        Ok(())
     }
 }
 
@@ -67,9 +70,9 @@ impl From<v1::TaskStatus> for TaskStatus {
     }
 }
 
-impl Into<v1::TaskStatus> for TaskStatus {
-    fn into(self) -> v1::TaskStatus {
-        match self {
+impl From<TaskStatus> for v1::TaskStatus {
+    fn from(val: TaskStatus) -> Self {
+        match val {
             TaskStatus::Unknown => v1::TaskStatus::Unspecified,
             TaskStatus::Pending => v1::TaskStatus::Pending,
             TaskStatus::Running => v1::TaskStatus::Running,

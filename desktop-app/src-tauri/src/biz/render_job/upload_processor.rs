@@ -33,6 +33,12 @@ pub struct FileUploadQueue {
     queue: Queue,
 }
 
+impl Default for FileUploadQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FileUploadQueue {
     pub fn new() -> FileUploadQueue {
         FileUploadQueue {
@@ -182,8 +188,8 @@ impl FileUploadProcessor {
         // Create dependent resources
         log::info!("Persisting job and creating tasks...");
         let tasks = with_transaction(&self.pool, |tx| {
-            repo::save(&tx, &job)?;
-            self.create_tasks(&tx, &job)
+            repo::save(tx, &job)?;
+            self.create_tasks(tx, &job)
         })?;
 
         emit_job_status_update_event(&self.handle, &job.id)?;
@@ -220,7 +226,7 @@ impl FileUploadProcessor {
                 let path = entry.path();
 
                 // Determine relative path
-                let relative_path = path.strip_prefix(base_path.to_path_buf()).map_err(|_e| {
+                let relative_path = path.strip_prefix(base_path).map_err(|_e| {
                     AppError::FileReadError("Could not create relative path.".to_string())
                 })?;
                 let relative_path_str = relative_path.to_string_lossy().into_owned();

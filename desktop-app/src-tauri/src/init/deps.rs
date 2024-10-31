@@ -119,9 +119,9 @@ pub fn init_deps(app: &mut tauri::App) -> InitResult {
 
     // Async initialize
     let state = tokio::task::block_in_place(move || {
-        let result = tauri::async_runtime::block_on(async { future.await });
+        
 
-        result
+        tauri::async_runtime::block_on(future)
     });
 
     app.manage(state);
