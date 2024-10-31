@@ -20,6 +20,7 @@ message CreateJobRequest {
   string download_path = 5;
   optional string name = 6;
   optional string ocio_config_path = 7;
+  optional uint32 memory_mib = 8;
 }
 
 message CreateJobResponse {
@@ -37,6 +38,14 @@ message CancelJobRequest {
 
 message DeleteJobRequest {
   string job_id = 1;
+}
+
+message DownloadJobOutputsRequest {
+  string job_id = 1;
+}
+
+message DownloadJobOutputsResponse {
+  uint32 downloaded_count = 1;
 }
 
 /** Queries **/

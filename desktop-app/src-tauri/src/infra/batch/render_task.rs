@@ -4,7 +4,7 @@ use super::constants::{JOB_DEF_NAME, QUEUE_NAME};
 use crate::{errors::AppError, infra::db::render_task::entity::RenderTask};
 
 // Submit a task job
-pub async fn submit_job(client: &aws_sdk_batch::Client, task: &RenderTask) -> Result<(), AppError> {
+pub async fn submit_job(client: &aws_sdk_batch::Client, vcpu: u8, memory_mib: u32, task: &RenderTask) -> Result<(), AppError> {
     let job_id = task.job_id.clone();
     let task_id = task.id.clone();
 
@@ -25,8 +25,20 @@ pub async fn submit_job(client: &aws_sdk_batch::Client, task: &RenderTask) -> Re
             .build(),
     ];
 
+    let resources = vec![
+        aws_sdk_batch::types::ResourceRequirement::builder()
+            .set_type(Some(aws_sdk_batch::types::ResourceType::Vcpu))
+            .set_value(Some(vcpu.to_string()))
+            .build(),
+        aws_sdk_batch::types::ResourceRequirement::builder()
+            .set_type(Some(aws_sdk_batch::types::ResourceType::Memory))
+            .set_value(Some(memory_mib.to_string()))
+            .build(),
+    ];
+
     let overrides = aws_sdk_batch::types::ContainerOverrides::builder()
         .set_environment(Some(environment))
+        .set_resource_requirements(Some(resources))
         .build();
 
     let _res = client

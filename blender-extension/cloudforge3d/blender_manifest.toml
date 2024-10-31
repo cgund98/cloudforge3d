@@ -1,0 +1,29 @@
+schema_version = "1.0.0"
+
+# Example of manifest file for a Blender extension
+# Change the values according to your extension
+id = "cloudforge3d"
+version = "0.1.0"
+name = "CloudForge3D"
+tagline = "Personal render farm for AWS."
+maintainer = "Callum Gundlach <gundlachcallum@gmail.com>"
+type = "add-on"
+
+website = "https://github.com/cgund98/cloudforge3d"
+
+blender_version_min = "4.2.0"
+
+tags = [
+  "Pipeline", "User Interface"
+]
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  ".*",
+  "*.zip",
+]

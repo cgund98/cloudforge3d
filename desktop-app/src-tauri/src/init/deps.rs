@@ -4,6 +4,7 @@ type InitResult = Result<(), Box<dyn std::error::Error + 'static>>;
 use std::sync::Arc;
 
 use tauri::{AppHandle, Manager};
+use tonic::transport::Server;
 
 use crate::biz;
 use crate::biz::render_job::cancel_processor::{CancelProcessor, CancelProcessorQueue};
@@ -13,6 +14,8 @@ use crate::infra::batch::client_manager::BatchClientManager;
 use crate::infra::s3::client_manager::S3ClientManager;
 use crate::infra::sqs::client_manager::SqsClientManager;
 use crate::infra::sqs::task_status_update;
+use crate::interface::server::JobsService;
+use crate::spec::proto::v1;
 use crate::state::AppState;
 use crate::{biz::render_job::upload_processor::FileUploadProcessor, infra::db::init::init_db};
 
@@ -34,28 +37,29 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
     let cancel_queue = Arc::new(CancelProcessorQueue::new());
 
     // Initialize controllers
-    let job_ctrl = biz::render_job::controller::Controller::new(
+    let job_ctrl = Arc::new(biz::render_job::controller::Controller::new(
         pool.clone(),
         file_upload_queue.clone(),
         cancel_queue.clone(),
         s3_client_manager.clone(),
         async_handle.clone(),
-    );
+    ));
     let task_ctrl = Arc::new(biz::render_task::controller::Controller::new(
         pool.clone(),
         async_handle.clone(),
         thumbnail_queue.clone(),
     ));
-    let settings_ctrl = biz::settings::Controller::new(repos.settings_repo.clone());
+    let settings_ctrl =
+        biz::settings::Controller::new(repos.settings_repo.clone(), s3_client_manager.clone());
 
     // Initialize state
     let state = crate::state::AppState {
-        job_ctrl: Some(job_ctrl),
+        job_ctrl: Some(job_ctrl.clone()),
         task_ctrl: Some(task_ctrl.clone()),
         settings_ctrl: Some(settings_ctrl),
     };
-    // Spawn a separate thread for the file upload processor
 
+    // Spawn a separate thread for the file upload processor
     let batch_client_manager = BatchClientManager::new(repos.settings_repo.clone());
     let processor = FileUploadProcessor::new(
         pool.clone(),
@@ -68,9 +72,8 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
 
     // Spawn a separate thread for the task update consumer
     let sqs_client_manager = SqsClientManager::new(repos.settings_repo.clone());
-    let mut updates_consumer = task_status_update::TaskStatusUpdateConsumer::new(
-        s3_client_manager.clone(),
-    );
+    let mut updates_consumer =
+        task_status_update::TaskStatusUpdateConsumer::new(s3_client_manager.clone());
 
     tokio::spawn(async move {
         updates_consumer
@@ -88,6 +91,21 @@ async fn init_async_deps(handle: &AppHandle, processor_handle: AppHandle) -> App
         CancelProcessor::new(cancel_queue.clone(), pool.clone(), async_handle.clone());
     let cancel_batch_manager = BatchClientManager::new(repos.settings_repo.clone());
     tokio::spawn(async move { cancel_processor.start_task(cancel_batch_manager).await });
+
+    // Spawn separate thread for gRPC service
+    let jobs_service = JobsService::new(job_ctrl.clone());
+    let addr = "127.0.0.1:52531".parse().unwrap();
+    tokio::spawn(async move {
+        log::info!("Jobs service started on {addr}.");
+
+        let _ = Server::builder()
+            .add_service(v1::jobs_service_server::JobsServiceServer::new(
+                jobs_service,
+            ))
+            .serve(addr)
+            .await
+            .inspect_err(|e| log::error!("Jobs service stopped due to error: {e}"));
+    });
 
     state
 }

@@ -2,17 +2,18 @@ use std::sync::Arc;
 
 use crate::{
     errors::AppError,
-    infra::settings::SettingsRepo,
-    spec::proto::v1::{GetAwsCredentialsResponse, UpdateAwsCredentialsCommand},
+    infra::{s3::{client_manager::S3ClientManager, health::check_health}, settings::SettingsRepo},
+    spec::proto::v1::{GetAwsCredentialsResponse, CheckDeploymentHealthResponse, UpdateAwsCredentialsCommand},
 };
 
 pub struct Controller {
     repo: Arc<SettingsRepo>,
+    s3_manager: Arc<S3ClientManager>,
 }
 
 impl Controller {
-    pub fn new(repo: Arc<SettingsRepo>) -> Controller {
-        Controller { repo }
+    pub fn new(repo: Arc<SettingsRepo>, s3_manager: Arc<S3ClientManager>) -> Controller {
+        Controller { repo, s3_manager }
     }
 
     pub async fn update_aws_credentials(
@@ -38,6 +39,20 @@ impl Controller {
             secret_access_key: config.secret_access_key,
             region: config.region,
         };
+
+        Ok(response)
+    }
+
+    pub async fn check_deployment_health(&self) -> Result<CheckDeploymentHealthResponse, AppError> {
+        let s3_client = self.s3_manager.get_client().await?;
+        let health_response = check_health(&s3_client).await;
+
+        let status = match health_response {
+            Ok(_) => "ready",
+            Err(_) => "unreachable",
+        };
+
+        let response = CheckDeploymentHealthResponse { status: status.to_string() };
 
         Ok(response)
     }

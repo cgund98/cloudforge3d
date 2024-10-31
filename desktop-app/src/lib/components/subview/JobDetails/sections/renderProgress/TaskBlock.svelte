@@ -78,7 +78,7 @@
         <div></div>
       {/if}
 
-      {#if task.status === TaskStatus.Failed}
+      {#if task.status === TaskStatus.Failed && false}
         <button class="text-secondary btn btn-ghost btn-xs">Retry</button>
       {:else}
         <div></div>

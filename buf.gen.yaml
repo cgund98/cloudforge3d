@@ -2,7 +2,7 @@ version: v2
 managed:
   enabled: true
 plugins:
-  ## Python
+  ## Python (job-runner)
   - remote: buf.build/protocolbuffers/python:v28.2
     out: job-runner/runner/lib/spec
     include_wkt: true
@@ -10,6 +10,21 @@ plugins:
   # dependencies
   - remote: buf.build/protocolbuffers/pyi:v28.2
     out: job-runner/runner/lib/spec
+    include_wkt: true
+    include_imports: true
+    
+  ## Python (blender-extension)
+  - remote: buf.build/protocolbuffers/python:v28.2
+    out: blender-extension/cloudforge3d/client
+    include_wkt: true
+    include_imports: true
+  # dependencies
+  - remote: buf.build/protocolbuffers/pyi:v28.2
+    out: blender-extension/cloudforge3d/client
+    include_wkt: true
+    include_imports: true
+  - remote: buf.build/grpc/python:v1.67.0
+    out: blender-extension/cloudforge3d/client
     include_wkt: true
     include_imports: true
 

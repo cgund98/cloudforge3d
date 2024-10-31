@@ -3,6 +3,8 @@
   export let label: string;
   export let value: string;
 
+  export let handle: (newValue: string) => void;
+
   const placeholder = "No Path Specified";
 </script>
 
@@ -22,7 +24,7 @@
           multiple: false,
         });
 
-        if (typeof newPath === "string") value = newPath;
+        if (typeof newPath === "string") handle(newPath);
       }}
       {placeholder}
       readonly

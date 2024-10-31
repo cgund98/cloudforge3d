@@ -1,6 +1,6 @@
 use crate::{
     errors::AppError,
-    spec::proto::v1::{GetAwsCredentialsResponse, UpdateAwsCredentialsCommand},
+    spec::proto::v1::{GetAwsCredentialsResponse, CheckDeploymentHealthResponse, UpdateAwsCredentialsCommand},
     state::AppState,
 };
 
@@ -19,4 +19,12 @@ pub async fn get_aws_credentials(
 ) -> Result<GetAwsCredentialsResponse, AppError> {
     let ctrl = state.settings_ctrl.as_ref().unwrap();
     ctrl.get_aws_credentials().await
+}
+
+#[tauri::command]
+pub async fn check_deployment_health(
+    state: tauri::State<'_, AppState>,
+) -> Result<CheckDeploymentHealthResponse, AppError> {
+    let ctrl = state.settings_ctrl.as_ref().unwrap();
+    ctrl.check_deployment_health().await
 }

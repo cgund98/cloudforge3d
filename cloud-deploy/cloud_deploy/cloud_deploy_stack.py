@@ -75,7 +75,8 @@ class CloudDeployStack(Stack):
             compute_environment_name="cf3d-cpu-render-env",
             vpc=vpc,
             allocation_strategy=batch.AllocationStrategy.SPOT_CAPACITY_OPTIMIZED,
-            instance_classes=[ec2.InstanceClass.M6I, ec2.InstanceClass.M5],
+            instance_classes=[ec2.InstanceClass.C5, ec2.InstanceClass.C4, ec2.InstanceClass.C5A, ec2.InstanceClass.C6I, ec2.InstanceClass.C7I],
+            use_optimal_instance_classes=False,
             minv_cpus=0,
             maxv_cpus=96,
             spot=True,
@@ -109,12 +110,14 @@ class CloudDeployStack(Stack):
             self,
             "MyJobDefinition",
             job_definition_name="cf3d-cpu-job-definition",
+            timeout=Duration.hours(12),
+            propagate_tags=True,
             container=batch.EcsEc2ContainerDefinition(
                 self,
                 "CpuRenderContainerDef",
                 job_role=job_role,
                 image=ecs.ContainerImage.from_registry(
-                    "cgundlach13/cloudforge3d-blender-cpu-render:v0.1.0"
+                    "cgundlach13/cloudforge3d-blender-cpu-render:v0.1.1"
                 ),
                 memory=Size.mebibytes(1024 * 15),
                 cpu=8,

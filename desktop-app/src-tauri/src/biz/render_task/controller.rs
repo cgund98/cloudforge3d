@@ -169,7 +169,7 @@ impl Controller {
         let thumbnail_path = thumbnails_path.join(&source_key);
 
         // Download file
-        let download_res = download_job_file(s3_client, job_id, source_key, thumbnail_path).await;
+        let download_res = download_job_file(s3_client, &job_id, &source_key, thumbnail_path).await;
 
         let task_id = task.id.clone();
         if let Ok(_download_size) = download_res {

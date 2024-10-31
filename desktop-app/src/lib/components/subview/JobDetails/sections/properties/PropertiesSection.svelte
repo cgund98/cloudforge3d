@@ -26,7 +26,7 @@
       <Property label="Frame Count" value={job.frameCount.toString()}
         ><RectangleStack/></Property
       >
-      <Property label="Frame Rate" value={job.frameRate.toString()}
+      <Property label="Frame Rate" value={`${job.frameRate} fps`}
         ><FilmIcon/></Property
       >
     </div>

@@ -11,7 +11,7 @@ use crate::{
         db::{
             decorator::{with_conn, with_transaction},
             pool::PoolType,
-            render_job, render_task,
+            render_job::{self, entity::JobStatus}, render_task::{self, entity::TaskStatus},
         },
     },
     interface::events::emit_job_status_update_event,
@@ -148,6 +148,10 @@ impl CancelProcessor {
         job.status = render_job::entity::JobStatus::Canceled;
         tasks = tasks
             .into_iter()
+            .filter(|t| match t.status {
+                TaskStatus::Succeeded | TaskStatus::Failed => false,
+                _ => true,
+            })
             .map(|mut t| {
                 t.status = render_task::entity::TaskStatus::Canceled;
                 t

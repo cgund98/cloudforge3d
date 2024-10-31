@@ -38,7 +38,7 @@
       (e) => {
         const event = JSON.parse(e.payload) as JobStatusUpdateEvent;
         const found = jobs.find(j => j.id === event.jobId)
-        if (!jobs || jobs.length < pageCount ||  found !== undefined) fetch()
+        if (!jobs || jobs.length <= pageSize ||  found !== undefined) fetch()
       }
     );
     unMountFn = unlisten;
@@ -67,12 +67,12 @@
     </div>
 
     <div>
-      <button
+      <!-- <button
         class="join-item btn btn-sm btn-primary"
         onclick={() => {
           createJob().then(fetch).catch(console.error);
         }}>Create Job</button
-      >
+      > -->
     </div>
   </div>
 

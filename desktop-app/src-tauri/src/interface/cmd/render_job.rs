@@ -31,6 +31,15 @@ pub fn get_job(
 }
 
 #[tauri::command]
+pub fn update_job(
+    input: v1::UpdateJobRequest,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), AppError> {
+    let ctrl = state.job_ctrl.as_ref().unwrap();
+    ctrl.update_job(input)
+}
+
+#[tauri::command]
 pub fn cancel_job(
     input: v1::CancelJobRequest,
     state: tauri::State<'_, AppState>,
@@ -46,4 +55,13 @@ pub async fn delete_job(
 ) -> Result<(), AppError> {
     let ctrl = state.job_ctrl.as_ref().unwrap();
     ctrl.delete_job(input).await
+}
+
+#[tauri::command]
+pub async fn download_frames(
+    input: v1::DownloadJobOutputsRequest,
+    state: tauri::State<'_, AppState>,
+) -> Result<v1::DownloadJobOutputsResponse, AppError> {
+    let ctrl = state.job_ctrl.as_ref().unwrap();
+    ctrl.download_frames(input).await
 }
