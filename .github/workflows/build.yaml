@@ -7,13 +7,6 @@ on:
       - '*/*' # matches every branch containing a single '/'
       - '**' # matches every branch
       - '!main' # excludes main
-    paths:
-      - 'desktop-app/src/**'
-      - 'desktop-app/src-tauri/**'
-      - '.github'
-      - 'spec'
-      - 'buf.gen.yaml'
-      - 'buf.yaml'
 
 jobs:
   build:
