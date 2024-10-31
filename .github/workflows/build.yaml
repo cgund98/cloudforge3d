@@ -7,9 +7,9 @@ on:
       - '*/*' # matches every branch containing a single '/'
       - '**' # matches every branch
       - '!main' # excludes main
-    paths:
-      - 'desktop-app/src/**'
-      - 'desktop-app/src-tauri/**'
+    # paths:
+    #   - 'desktop-app/src/**'
+    #   - 'desktop-app/src-tauri/**'
 
 jobs:
   build:
