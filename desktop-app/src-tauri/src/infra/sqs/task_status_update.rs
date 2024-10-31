@@ -115,7 +115,7 @@ impl TaskStatusUpdateConsumer {
         let msgs_unwrapped = msgs_response.messages.unwrap_or_default();
 
         // Skip if no messages were found.
-        if msgs_unwrapped.len() == 0 {
+        if msgs_unwrapped.is_empty() {
             return Ok(0);
         }
 

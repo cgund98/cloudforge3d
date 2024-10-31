@@ -50,18 +50,21 @@ impl std::str::FromStr for JobStatus {
     }
 }
 
-impl ToString for JobStatus {
-    fn to_string(&self) -> String {
-        match self {
-            JobStatus::Uploading => "uploading".to_string(),
-            JobStatus::UploadFailed => "uploading-failed".to_string(),
-            JobStatus::Pending => "pending".to_string(),
-            JobStatus::Running => "running".to_string(),
-            JobStatus::Succeeded => "succeeded".to_string(),
-            JobStatus::Failed => "failed".to_string(),
-            JobStatus::Canceling => "canceling".to_string(),
-            JobStatus::Canceled => "canceled".to_string(),
-            JobStatus::Deleting => "deleting".to_string(),
-        }
+impl std::fmt::Display for JobStatus {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let status = match self {
+            JobStatus::Uploading => "uploading",
+            JobStatus::UploadFailed => "uploading-failed",
+            JobStatus::Pending => "pending",
+            JobStatus::Running => "running",
+            JobStatus::Succeeded => "succeeded",
+            JobStatus::Failed => "failed",
+            JobStatus::Canceling => "canceling",
+            JobStatus::Canceled => "canceled",
+            JobStatus::Deleting => "deleting",
+        };
+
+        fmt.write_str(status)?;
+        Ok(())
     }
 }

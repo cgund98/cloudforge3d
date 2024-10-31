@@ -42,10 +42,7 @@ pub async fn list_incomplete_jobs(
         .filter(|sum| {
             sum.status
                 .as_ref()
-                .map(|s| match s {
-                    JobStatus::Failed | JobStatus::Succeeded => false,
-                    _ => true,
-                })
+                .map(|s| !matches!(s, JobStatus::Failed | JobStatus::Succeeded))
                 .unwrap_or(false)
         })
         .flat_map(|sum| sum.job_id)

@@ -66,6 +66,6 @@ impl BatchClientManager {
             return false;
         }
 
-        return true;
+        true
     }
 }

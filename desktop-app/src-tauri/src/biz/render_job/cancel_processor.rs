@@ -11,7 +11,7 @@ use crate::{
         db::{
             decorator::{with_conn, with_transaction},
             pool::PoolType,
-            render_job::{self, entity::JobStatus}, render_task::{self, entity::TaskStatus},
+            render_job::{self}, render_task::{self, entity::TaskStatus},
         },
     },
     interface::events::emit_job_status_update_event,
@@ -37,6 +37,12 @@ pub struct CancelProcessorQueue {
 const FAILURE_BACKOFF: core::time::Duration = time::Duration::from_secs(20);
 
 // A simple thread-safe queue with deduplication
+impl Default for CancelProcessorQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CancelProcessorQueue {
     pub fn new() -> CancelProcessorQueue {
         CancelProcessorQueue {
@@ -100,7 +106,7 @@ impl CancelProcessor {
             let job_id = input.job_id.clone();
 
             log::info!("Cancelling AWS Batch jobs for render job (job_id={job_id})...");
-            let _res = self.handle_input(&mut batch_manager, &input).await
+            self.handle_input(&mut batch_manager, &input).await
             .inspect(|_| log::info!("Cancelled all AWS Batch jobs for render job (job_id={job_id})."))
                 .unwrap_or_else(|f| {
                 log::error!("Encountered unexpected error when cancelling AWS Batch jobs for render job (job_id={job_id}): {f}");
@@ -148,10 +154,7 @@ impl CancelProcessor {
         job.status = render_job::entity::JobStatus::Canceled;
         tasks = tasks
             .into_iter()
-            .filter(|t| match t.status {
-                TaskStatus::Succeeded | TaskStatus::Failed => false,
-                _ => true,
-            })
+            .filter(|t| !matches!(t.status, TaskStatus::Succeeded | TaskStatus::Failed))
             .map(|mut t| {
                 t.status = render_task::entity::TaskStatus::Canceled;
                 t

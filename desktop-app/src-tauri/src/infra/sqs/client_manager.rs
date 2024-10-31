@@ -66,6 +66,6 @@ impl SqsClientManager {
             return false;
         }
 
-        return true;
+        true
     }
 }

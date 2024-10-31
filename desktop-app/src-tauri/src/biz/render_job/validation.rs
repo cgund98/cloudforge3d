@@ -4,8 +4,8 @@ use crate::{errors::AppError, spec::proto::v1};
 
 const MAX_FRAME_COUNT: i32 = 2000;
 
-const MIN_MEMORY_MIB: u32 = 1024*4;
-const MAX_MEMORY_MIB: u32 = 1024*64;
+const MIN_MEMORY_MIB: u32 = 1024*3;
+const MAX_MEMORY_MIB: u32 = 1024*63;
 
 // Validate a create job request
 pub fn can_create_job(req: &v1::CreateJobRequest) -> Result<(), AppError> {
@@ -36,7 +36,7 @@ pub fn can_create_job(req: &v1::CreateJobRequest) -> Result<(), AppError> {
     }
 
     let memory_mib = req.memory_mib.unwrap_or(1024*4);
-    if memory_mib < MIN_MEMORY_MIB || memory_mib > MAX_MEMORY_MIB {
+    if !(MIN_MEMORY_MIB..=MAX_MEMORY_MIB).contains(&memory_mib) {
         return Err(AppError::BadRequest("Invalid memory_mib.".to_string()));
     }
 

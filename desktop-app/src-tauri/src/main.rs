@@ -18,7 +18,7 @@ async fn main() {
         )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
-        .setup(|app| cloudforge3d_lib::init::deps::init_deps(app))
+        .setup(cloudforge3d_lib::init::deps::init_deps)
         .invoke_handler(tauri::generate_handler![
             cloudforge3d_lib::interface::greet::greet,
             cmd::settings::update_aws_credentials,

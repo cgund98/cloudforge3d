@@ -27,6 +27,12 @@ pub struct ThumbnailGeneratorQueue {
 }
 
 // A simple thread-safe queue with deduplication
+impl Default for ThumbnailGeneratorQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ThumbnailGeneratorQueue {
     pub fn new() -> ThumbnailGeneratorQueue {
         ThumbnailGeneratorQueue {
@@ -99,7 +105,7 @@ impl ThumbnailGenerator {
             let job_id = input.job_id.clone();
 
             log::info!("Generating thumbnail for (job_id={job_id})...");
-            let _res = self.handle_input(&input).await
+            self.handle_input(&input).await
             .inspect(|_| log::info!("Generated thumbnail for job (job_id={job_id})."))
                 .unwrap_or_else(|f| {
                 log::error!("Encountered unexpected error when generating thumbnail for job (job_id={job_id}): {f}");
