@@ -27,7 +27,7 @@
   };
 
   let isSequence = $derived(job.frameCount !== 1);
-  let genProm = generatePaths(job);
+  let genProm = $derived(generatePaths(job));
   let showGif = $derived(isSequence && gifPath !== "" && !paused);
 </script>
 

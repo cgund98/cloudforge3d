@@ -1,5 +1,5 @@
 use core::time;
-use std::{path::PathBuf, sync::Arc, thread};
+use std::{fs, path::PathBuf, sync::Arc, thread};
 
 use tauri::AppHandle;
 
@@ -61,7 +61,10 @@ pub struct FileUploadProcessor {
 pub struct FileUploadProcessorInput {
     pub job_id: String,
     pub file_path: String,
+    pub file_name: String,
     pub ocio_config_path: Option<String>,
+    pub memory_mib: u32,
+    pub vcpus: u8,
 }
 
 // Helper struct used for passing data from file scans
@@ -154,7 +157,7 @@ impl FileUploadProcessor {
             .into_owned();
 
         log::info!("Uploading blend file ({blend_name})");
-        s3::job_file::upload_job_file(&s3_client, &job_id, blend_path, &blend_key, |p| {
+        s3::job_file::upload_job_file(&s3_client, &job_id, blend_path.clone(), &blend_key, |p| {
             self.emit_progress(p)
         })
         .await?;
@@ -185,9 +188,12 @@ impl FileUploadProcessor {
 
         emit_job_status_update_event(&self.handle, &job.id)?;
 
+        // Remove tempfile
+        fs::remove_file(blend_path)?;
+
         // Submit batch jobs
         log::info!("Submitting jobs...");
-        self.submit_tasks(batch_client, tasks).await?;
+        self.submit_tasks(batch_client, input.vcpus, input.memory_mib, tasks).await?;
 
         Ok(())
     }
@@ -235,10 +241,12 @@ impl FileUploadProcessor {
     async fn submit_tasks(
         &self,
         batch_client: &aws_sdk_batch::Client,
+        vcpus: u8,
+        memory_mib: u32,
         tasks: Vec<RenderTask>,
     ) -> Result<(), AppError> {
         for task in tasks {
-            batch::render_task::submit_job(batch_client, &task).await?;
+            batch::render_task::submit_job(batch_client, vcpus, memory_mib, &task).await?;
         }
 
         Ok(())

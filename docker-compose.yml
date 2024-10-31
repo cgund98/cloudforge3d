@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   blender:
-    image: cgundlach13/cloudforge3d-blender-cpu-render:v0.1.0
+    image: cgundlach13/cloudforge3d-blender-cpu-render:v0.1.1
     container_name: blender
     platform: linux/amd64
     environment:

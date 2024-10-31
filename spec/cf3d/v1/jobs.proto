@@ -20,6 +20,7 @@ message CreateJobRequest {
   string download_path = 5;
   optional string name = 6;
   optional string ocio_config_path = 7;
+  optional uint32 memory_mib = 8;
 }
 
 message CreateJobResponse {

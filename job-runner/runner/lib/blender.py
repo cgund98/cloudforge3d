@@ -43,7 +43,7 @@ def render_cycles_cpu_frame(
     # For some reason, blender doesn't log anything to stderr, so we don't capture that output.
     # We do want to capture stdout, though so we can debug a failed job.
     print("Running command:", cmd)
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # Monitor stdout as process runs
     logs = []
@@ -53,6 +53,11 @@ def render_cycles_cpu_frame(
 
     process.stdout.close()
     code = process.wait()
+
+    err_lines = process.stderr.readlines()
+    for line in err_lines:
+        logs.append(line)
+        print(line.rstrip())
 
     if code != 0:
         output_path = None
